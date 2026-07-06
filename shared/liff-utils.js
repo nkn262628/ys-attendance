@@ -23,7 +23,6 @@ const LiffUtils = {
 
   /**
    * 查詢目前這個 LINE 使用者是否已綁定員工資料
-   * 回傳 { bound: true, empName, status } 或 { bound: false }
    */
   async checkBinding() {
     const res = await fetch(CONFIG.GAS_URL, {
@@ -38,7 +37,6 @@ const LiffUtils = {
 
   /**
    * 送出員工編號完成綁定
-   * 回傳 { success: true, empName } 或 { success: false, message }
    */
   async bindEmployee(empId) {
     const res = await fetch(CONFIG.GAS_URL, {
