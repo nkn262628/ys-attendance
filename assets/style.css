@@ -164,6 +164,58 @@ body {
   margin-top: 1px;
 }
 
+.profile .info .uid {
+  margin-top: 3px;
+  font-size: 11px;
+  color: var(--muted);
+  font-family: 'Space Grotesk', monospace;
+  letter-spacing: 0.01em;
+  word-break: break-all;
+}
+
+/* 進場動畫：淡入 + 輕微上滑 */
+.card {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+.card.ready {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 0.45s ease, transform 0.45s ease;
+}
+
+.profile .avatar {
+  transform: scale(0.9);
+  opacity: 0;
+}
+
+.profile .avatar.loaded {
+  transform: scale(1);
+  opacity: 1;
+  transition: transform 0.35s ease, opacity 0.35s ease;
+}
+
+/* 測試用小連結（正式上線前可移除） */
+.dev-tool {
+  margin-top: 18px;
+  text-align: center;
+}
+
+.dev-tool button {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 12px;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.dev-tool button:hover {
+  color: var(--teal-deep);
+}
+
 /* 打卡印章區 */
 .stamp-zone {
   margin: 36px 0 8px;

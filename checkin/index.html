@@ -34,6 +34,7 @@
       <div class="info">
         <div class="greeting">目前登入</div>
         <div class="name" id="userName">尚未連接</div>
+        <div class="uid" id="userId"></div>
       </div>
     </div>
 
@@ -65,6 +66,11 @@
 
     <!-- 狀態列 -->
     <div class="status" id="statusBar">正在連接 LINE...</div>
+
+    <!-- 測試用：登出重新測試登入流程，正式上線前移除 -->
+    <div class="dev-tool">
+      <button id="btnLogout">登出，重新測試登入流程</button>
+    </div>
 
   </div>
 </div>
@@ -99,6 +105,7 @@
       if (!profile) return; // 正在導轉去登入
 
       document.getElementById('userName').textContent = profile.displayName;
+      document.getElementById('userId').textContent = 'LINE ID: ' + profile.userId;
 
       const avatarBox = document.getElementById('avatarBox');
       if (profile.pictureUrl) {
@@ -112,11 +119,22 @@
       document.getElementById('stampLabel').textContent = '準備打卡';
 
       setStatus('已連接 LINE，測試頁尚未串接 Kintone', 'ok');
+
+      // 進場動畫：等資料都填好後才淡入，避免看到空殼畫面
+      document.querySelector('.card').classList.add('ready');
+      requestAnimationFrame(() => avatarBox.classList.add('loaded'));
     } catch (err) {
       console.error(err);
       setStatus('LINE 連接失敗，請確認 LIFF ID 設定', 'error');
+      document.querySelector('.card').classList.add('ready');
     }
   }
+
+  // 測試用：登出後重新整理頁面，會重新觸發登入流程
+  document.getElementById('btnLogout').addEventListener('click', () => {
+    liff.logout();
+    window.location.reload();
+  });
 
   // 測試用：按下按鈕先做視覺回饋，之後這裡會換成真正呼叫 Kintone API
   document.getElementById('btnCheckIn').addEventListener('click', () => {
