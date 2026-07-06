@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>出勤打卡 · Y's Cloud</title>
+<link rel="stylesheet" href="../assets/style.css" />
+</head>
+<body>
+
+<div class="screen">
+
+  <div class="topbar">
+    <span class="brand">Y'S CLOUD</span>
+    <span class="sep">·</span>
+    <span class="sub">出勤打卡</span>
+  </div>
+
+  <div class="card">
+
+    <!-- 即時時鐘 -->
+    <div class="clock">
+      <div class="time" id="clockTime">--:--:--</div>
+      <div class="date" id="clockDate">載入中</div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- 使用者資訊 -->
+    <div class="profile">
+      <div class="avatar" id="avatarBox">
+        <span class="placeholder">?</span>
+      </div>
+      <div class="info">
+        <div class="greeting">目前登入</div>
+        <div class="name" id="userName">尚未連接</div>
+      </div>
+    </div>
+
+    <!-- 打卡印章 -->
+    <div class="stamp-zone">
+      <svg viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg" id="stampSvg">
+        <circle cx="60" cy="60" r="52" stroke="#D8DFDD" stroke-width="2" />
+        <circle cx="60" cy="60" r="52" stroke="#1F8F86" stroke-width="2.5"
+                stroke-dasharray="326.7" stroke-dashoffset="326.7" id="stampRing"
+                stroke-linecap="round" transform="rotate(-90 60 60)" />
+        <!-- 分鐘刻度 -->
+        <g stroke="#B9C4C2" stroke-width="1.5">
+          <line x1="60" y1="12" x2="60" y2="18" />
+          <line x1="60" y1="102" x2="60" y2="108" />
+          <line x1="12" y1="60" x2="18" y2="60" />
+          <line x1="102" y1="60" x2="108" y2="60" />
+        </g>
+        <text x="60" y="66" text-anchor="middle" font-family="Space Grotesk, sans-serif"
+              font-weight="600" font-size="15" fill="#14293D" id="stampText">尚未打卡</text>
+      </svg>
+      <div class="stamp-label" id="stampLabel">等待 LINE 連接後即可打卡</div>
+    </div>
+
+    <!-- 動作按鈕 -->
+    <div class="actions">
+      <button class="btn btn-primary" id="btnCheckIn" disabled>上班打卡</button>
+      <button class="btn btn-ghost" id="btnCheckOut" disabled>下班打卡</button>
+    </div>
+
+    <!-- 狀態列 -->
+    <div class="status" id="statusBar">正在連接 LINE...</div>
+
+  </div>
+</div>
+
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<script src="../shared/config.js"></script>
+<script src="../shared/liff-utils.js"></script>
+<script>
+  // 即時時鐘
+  function updateClock() {
+    const now = new Date();
+    const time = now.toLocaleTimeString('zh-TW', { hour12: false });
+    const date = now.toLocaleDateString('zh-TW', {
+      year: 'numeric', month: 'long', day: 'numeric', weekday: 'short'
+    });
+    document.getElementById('clockTime').textContent = time;
+    document.getElementById('clockDate').textContent = date;
+  }
+  updateClock();
+  setInterval(updateClock, 1000);
+
+  const statusBar = document.getElementById('statusBar');
+
+  function setStatus(text, type) {
+    statusBar.textContent = text;
+    statusBar.className = 'status' + (type ? ' ' + type : '');
+  }
+
+  async function start() {
+    try {
+      const profile = await LiffUtils.init();
+      if (!profile) return; // 正在導轉去登入
+
+      document.getElementById('userName').textContent = profile.displayName;
+
+      const avatarBox = document.getElementById('avatarBox');
+      if (profile.pictureUrl) {
+        avatarBox.innerHTML = `<img src="${profile.pictureUrl}" alt="頭像" />`;
+      } else {
+        avatarBox.innerHTML = `<span class="placeholder">${profile.displayName.charAt(0)}</span>`;
+      }
+
+      document.getElementById('btnCheckIn').disabled = false;
+      document.getElementById('btnCheckOut').disabled = false;
+      document.getElementById('stampLabel').textContent = '準備打卡';
+
+      setStatus('已連接 LINE，測試頁尚未串接 Kintone', 'ok');
+    } catch (err) {
+      console.error(err);
+      setStatus('LINE 連接失敗，請確認 LIFF ID 設定', 'error');
+    }
+  }
+
+  // 測試用：按下按鈕先做視覺回饋，之後這裡會換成真正呼叫 Kintone API
+  document.getElementById('btnCheckIn').addEventListener('click', () => {
+    document.getElementById('stampText').textContent = '已打卡';
+    document.getElementById('stampRing').style.strokeDashoffset = '0';
+    document.getElementById('stampRing').style.transition = 'stroke-dashoffset 0.6s ease';
+    document.getElementById('stampLabel').textContent = '上班打卡完成（測試）';
+  });
+
+  start();
+</script>
+
+</body>
+</html>

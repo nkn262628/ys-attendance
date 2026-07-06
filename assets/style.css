@@ -1,0 +1,277 @@
+/* ============================================
+   Y's Cloud 出勤系統 — 共用樣式
+   配色系統：深藍 + 藍綠，延續 ERP 簡報視覺識別
+   ============================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
+
+:root {
+  /* 色彩 token */
+  --paper: #EEF2F1;
+  --paper-raised: #FFFFFF;
+  --navy-deep: #0D1B26;
+  --navy: #14293D;
+  --teal: #1F8F86;
+  --teal-deep: #146058;
+  --teal-soft: #DCEEEC;
+  --ink: #16242E;
+  --muted: #6E7C86;
+  --line: #D8DFDD;
+
+  /* 字體 */
+  --font-display: 'Space Grotesk', 'IBM Plex Sans', sans-serif;
+  --font-body: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+}
+
+body {
+  font-family: var(--font-body);
+  background: var(--paper);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+.screen {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0 0 32px;
+}
+
+/* 頂部識別條 */
+.topbar {
+  width: 100%;
+  background: var(--navy);
+  color: #FFFFFF;
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.topbar .brand {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 14px;
+  letter-spacing: 0.06em;
+}
+
+.topbar .sep {
+  color: var(--teal);
+  opacity: 0.7;
+}
+
+.topbar .sub {
+  font-size: 13px;
+  color: #C7D2D8;
+}
+
+/* 主體容器 */
+.card {
+  width: 100%;
+  max-width: 400px;
+  padding: 28px 24px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* 即時時鐘 */
+.clock {
+  text-align: center;
+  margin-top: 12px;
+}
+
+.clock .time {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 48px;
+  letter-spacing: 0.02em;
+  color: var(--navy-deep);
+  font-variant-numeric: tabular-nums;
+}
+
+.clock .date {
+  margin-top: 4px;
+  font-size: 14px;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+}
+
+.divider {
+  width: 100%;
+  height: 1px;
+  background: var(--line);
+  margin: 28px 0;
+}
+
+/* 使用者資訊 */
+.profile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 4px 4px 0;
+}
+
+.profile .avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--teal-soft);
+  border: 1.5px solid var(--teal);
+  overflow: hidden;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.profile .avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.profile .avatar .placeholder {
+  color: var(--teal-deep);
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.profile .info .greeting {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.profile .info .name {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 17px;
+  color: var(--ink);
+  margin-top: 1px;
+}
+
+/* 打卡印章區 */
+.stamp-zone {
+  margin: 36px 0 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.stamp-zone svg {
+  width: 148px;
+  height: 148px;
+}
+
+.stamp-label {
+  margin-top: 14px;
+  font-size: 13px;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+}
+
+/* 按鈕 */
+.actions {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 28px;
+}
+
+.btn {
+  width: 100%;
+  padding: 15px;
+  border-radius: 10px;
+  border: none;
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 15px;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  transition: transform 0.08s ease, background 0.15s ease;
+}
+
+.btn:active {
+  transform: scale(0.98);
+}
+
+.btn-primary {
+  background: var(--teal);
+  color: #FFFFFF;
+}
+
+.btn-primary:hover {
+  background: var(--teal-deep);
+}
+
+.btn-primary:disabled {
+  background: var(--line);
+  color: var(--muted);
+  cursor: not-allowed;
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--navy);
+  border: 1.5px solid var(--line);
+}
+
+.btn-ghost:hover {
+  border-color: var(--teal);
+  color: var(--teal-deep);
+}
+
+/* 狀態列 */
+.status {
+  margin-top: 24px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: var(--paper-raised);
+  border: 1px solid var(--line);
+  font-size: 12.5px;
+  color: var(--muted);
+  width: 100%;
+  text-align: center;
+  letter-spacing: 0.01em;
+}
+
+.status.ok {
+  color: var(--teal-deep);
+  border-color: var(--teal);
+  background: var(--teal-soft);
+}
+
+.status.error {
+  color: #A23B3B;
+  border-color: #E3B3B3;
+  background: #FBEEEE;
+}
+
+/* 鍵盤可視焦點 */
+:focus-visible {
+  outline: 2px solid var(--teal);
+  outline-offset: 2px;
+}
+
+/* 動態減弱偏好 */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
+}
