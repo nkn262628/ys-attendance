@@ -27,6 +27,11 @@ const LiffUtils = {
   async checkBinding() {
     const res = await fetch(CONFIG.GAS_URL, {
       method: 'POST',
+      // 加入下方這兩行來繞過 GAS 的 CORS 限制與處理轉址
+      headers: {
+        'Content-Type': 'text/plain;charset=utf-8',
+      },
+      redirect: 'follow',
       body: JSON.stringify({
         action: 'lookup',
         lineUserId: this.profile.userId,
@@ -41,6 +46,11 @@ const LiffUtils = {
   async bindEmployee(empId) {
     const res = await fetch(CONFIG.GAS_URL, {
       method: 'POST',
+      // 這裡同樣補上這兩行
+      headers: {
+        'Content-Type': 'text/plain;charset=utf-8',
+      },
+      redirect: 'follow',
       body: JSON.stringify({
         action: 'bind',
         lineUserId: this.profile.userId,
