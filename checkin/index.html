@@ -122,7 +122,9 @@
                 setStatus('已連接 LINE，查詢綁定狀態中...', null);
                 const binding = await LiffUtils.checkBinding();
 
-                if (binding.bound) {
+                if (binding.blocked) {
+                    setStatus(binding.message, 'error');
+                } else if (binding.bound) {
                     document.getElementById('userName').textContent = binding.empName; // 改顯示員工姓名
                     document.getElementById('btnCheckIn').disabled = false;
                     document.getElementById('btnCheckOut').disabled = false;
