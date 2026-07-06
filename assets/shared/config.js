@@ -5,7 +5,7 @@
 
 const CONFIG = {
   // 從 LINE Developers「Add a LIFF app」建立後複製貼上
-  LIFF_ID: 'YOUR_LIFF_ID',
+  LIFF_ID: '2010617290-IaR9AsfU',
 
   // 之後接上 Kintone 時再填入，先保留結構
   KINTONE: {
