@@ -6,324 +6,369 @@
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
 
 :root {
-  /* 色彩 token */
-  --paper: #EEF2F1;
-  --paper-raised: #FFFFFF;
-  --navy-deep: #0D1B26;
-  --navy: #14293D;
-  --teal: #1F8F86;
-  --teal-deep: #146058;
-  --teal-soft: #DCEEEC;
-  --ink: #16242E;
-  --muted: #6E7C86;
-  --line: #D8DFDD;
+    /* 色彩 token */
+    --paper: #EEF2F1;
+    --paper-raised: #FFFFFF;
+    --navy-deep: #0D1B26;
+    --navy: #14293D;
+    --teal: #1F8F86;
+    --teal-deep: #146058;
+    --teal-soft: #DCEEEC;
+    --ink: #16242E;
+    --muted: #6E7C86;
+    --line: #D8DFDD;
 
-  /* 字體 */
-  --font-display: 'Space Grotesk', 'IBM Plex Sans', sans-serif;
-  --font-body: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    /* 字體 */
+    --font-display: 'Space Grotesk', 'IBM Plex Sans', sans-serif;
+    --font-body: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 * {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
 }
 
-html, body {
-  height: 100%;
+html,
+body {
+    height: 100%;
 }
 
 body {
-  font-family: var(--font-body);
-  background: var(--paper);
-  color: var(--ink);
-  -webkit-font-smoothing: antialiased;
+    font-family: var(--font-body);
+    background: var(--paper);
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
 }
 
 .screen {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 0 0 32px;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0 0 32px;
 }
 
 /* 頂部識別條 */
 .topbar {
-  width: 100%;
-  background: var(--navy);
-  color: #FFFFFF;
-  padding: 14px 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
+    width: 100%;
+    background: var(--navy);
+    color: #FFFFFF;
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
 }
 
 .topbar .brand {
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-size: 14px;
-  letter-spacing: 0.06em;
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 14px;
+    letter-spacing: 0.06em;
 }
 
 .topbar .sep {
-  color: var(--teal);
-  opacity: 0.7;
+    color: var(--teal);
+    opacity: 0.7;
 }
 
 .topbar .sub {
-  font-size: 13px;
-  color: #C7D2D8;
+    font-size: 13px;
+    color: #C7D2D8;
 }
 
 /* 主體容器 */
 .card {
-  width: 100%;
-  max-width: 400px;
-  padding: 28px 24px 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+    width: 100%;
+    max-width: 400px;
+    padding: 28px 24px 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }
 
 /* 即時時鐘 */
 .clock {
-  text-align: center;
-  margin-top: 12px;
+    text-align: center;
+    margin-top: 12px;
 }
 
 .clock .time {
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 48px;
-  letter-spacing: 0.02em;
-  color: var(--navy-deep);
-  font-variant-numeric: tabular-nums;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 48px;
+    letter-spacing: 0.02em;
+    color: var(--navy-deep);
+    font-variant-numeric: tabular-nums;
 }
 
 .clock .date {
-  margin-top: 4px;
-  font-size: 14px;
-  color: var(--muted);
-  letter-spacing: 0.02em;
+    margin-top: 4px;
+    font-size: 14px;
+    color: var(--muted);
+    letter-spacing: 0.02em;
 }
 
 .divider {
-  width: 100%;
-  height: 1px;
-  background: var(--line);
-  margin: 28px 0;
+    width: 100%;
+    height: 1px;
+    background: var(--line);
+    margin: 28px 0;
 }
 
 /* 使用者資訊 */
 .profile {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-  padding: 4px 4px 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 4px 4px 0;
 }
 
 .profile .avatar {
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  background: var(--teal-soft);
-  border: 1.5px solid var(--teal);
-  overflow: hidden;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: var(--teal-soft);
+    border: 1.5px solid var(--teal);
+    overflow: hidden;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .profile .avatar img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
 }
 
 .profile .avatar .placeholder {
-  color: var(--teal-deep);
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-size: 16px;
+    color: var(--teal-deep);
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 16px;
 }
 
 .profile .info .greeting {
-  font-size: 13px;
-  color: var(--muted);
+    font-size: 13px;
+    color: var(--muted);
 }
 
 .profile .info .name {
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-size: 17px;
-  color: var(--ink);
-  margin-top: 1px;
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 17px;
+    color: var(--ink);
+    margin-top: 1px;
 }
 
 .profile .info .uid {
-  margin-top: 3px;
-  font-size: 11px;
-  color: var(--muted);
-  font-family: 'Space Grotesk', monospace;
-  letter-spacing: 0.01em;
-  word-break: break-all;
+    margin-top: 3px;
+    font-size: 11px;
+    color: var(--muted);
+    font-family: 'Space Grotesk', monospace;
+    letter-spacing: 0.01em;
+    word-break: break-all;
 }
 
 /* 進場動畫：淡入 + 輕微上滑 */
 .card {
-  opacity: 0;
-  transform: translateY(10px);
+    opacity: 0;
+    transform: translateY(10px);
 }
 
 .card.ready {
-  opacity: 1;
-  transform: translateY(0);
-  transition: opacity 0.45s ease, transform 0.45s ease;
+    opacity: 1;
+    transform: translateY(0);
+    transition: opacity 0.45s ease, transform 0.45s ease;
 }
 
 .profile .avatar {
-  transform: scale(0.9);
-  opacity: 0;
+    transform: scale(0.9);
+    opacity: 0;
 }
 
 .profile .avatar.loaded {
-  transform: scale(1);
-  opacity: 1;
-  transition: transform 0.35s ease, opacity 0.35s ease;
+    transform: scale(1);
+    opacity: 1;
+    transition: transform 0.35s ease, opacity 0.35s ease;
 }
 
 /* 測試用小連結（正式上線前可移除） */
 .dev-tool {
-  margin-top: 18px;
-  text-align: center;
+    margin-top: 18px;
+    text-align: center;
 }
 
 .dev-tool button {
-  background: none;
-  border: none;
-  color: var(--muted);
-  font-size: 12px;
-  text-decoration: underline;
-  cursor: pointer;
-  padding: 4px;
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-size: 12px;
+    text-decoration: underline;
+    cursor: pointer;
+    padding: 4px;
 }
 
 .dev-tool button:hover {
-  color: var(--teal-deep);
+    color: var(--teal-deep);
 }
 
 /* 打卡印章區 */
 .stamp-zone {
-  margin: 36px 0 8px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+    margin: 36px 0 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }
 
 .stamp-zone svg {
-  width: 148px;
-  height: 148px;
+    width: 148px;
+    height: 148px;
 }
 
 .stamp-label {
-  margin-top: 14px;
-  font-size: 13px;
-  color: var(--muted);
-  letter-spacing: 0.02em;
+    margin-top: 14px;
+    font-size: 13px;
+    color: var(--muted);
+    letter-spacing: 0.02em;
 }
 
 /* 按鈕 */
 .actions {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-top: 28px;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 28px;
 }
 
 .btn {
-  width: 100%;
-  padding: 15px;
-  border-radius: 10px;
-  border: none;
-  font-family: var(--font-body);
-  font-weight: 600;
-  font-size: 15px;
-  letter-spacing: 0.01em;
-  cursor: pointer;
-  transition: transform 0.08s ease, background 0.15s ease;
+    width: 100%;
+    padding: 15px;
+    border-radius: 10px;
+    border: none;
+    font-family: var(--font-body);
+    font-weight: 600;
+    font-size: 15px;
+    letter-spacing: 0.01em;
+    cursor: pointer;
+    transition: transform 0.08s ease, background 0.15s ease;
 }
 
 .btn:active {
-  transform: scale(0.98);
+    transform: scale(0.98);
 }
 
 .btn-primary {
-  background: var(--teal);
-  color: #FFFFFF;
+    background: var(--teal);
+    color: #FFFFFF;
 }
 
 .btn-primary:hover {
-  background: var(--teal-deep);
+    background: var(--teal-deep);
 }
 
 .btn-primary:disabled {
-  background: var(--line);
-  color: var(--muted);
-  cursor: not-allowed;
+    background: var(--line);
+    color: var(--muted);
+    cursor: not-allowed;
 }
 
 .btn-ghost {
-  background: transparent;
-  color: var(--navy);
-  border: 1.5px solid var(--line);
+    background: transparent;
+    color: var(--navy);
+    border: 1.5px solid var(--line);
 }
 
 .btn-ghost:hover {
-  border-color: var(--teal);
-  color: var(--teal-deep);
+    border-color: var(--teal);
+    color: var(--teal-deep);
 }
 
 /* 狀態列 */
 .status {
-  margin-top: 24px;
-  padding: 10px 14px;
-  border-radius: 8px;
-  background: var(--paper-raised);
-  border: 1px solid var(--line);
-  font-size: 12.5px;
-  color: var(--muted);
-  width: 100%;
-  text-align: center;
-  letter-spacing: 0.01em;
+    margin-top: 24px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    background: var(--paper-raised);
+    border: 1px solid var(--line);
+    font-size: 12.5px;
+    color: var(--muted);
+    width: 100%;
+    text-align: center;
+    letter-spacing: 0.01em;
 }
 
 .status.ok {
-  color: var(--teal-deep);
-  border-color: var(--teal);
-  background: var(--teal-soft);
+    color: var(--teal-deep);
+    border-color: var(--teal);
+    background: var(--teal-soft);
 }
 
 .status.error {
-  color: #A23B3B;
-  border-color: #E3B3B3;
-  background: #FBEEEE;
+    color: #A23B3B;
+    border-color: #E3B3B3;
+    background: #FBEEEE;
 }
 
 /* 鍵盤可視焦點 */
 :focus-visible {
-  outline: 2px solid var(--teal);
-  outline-offset: 2px;
+    outline: 2px solid var(--teal);
+    outline-offset: 2px;
 }
 
 /* 動態減弱偏好 */
 @media (prefers-reduced-motion: reduce) {
-  * {
-    transition: none !important;
-    animation: none !important;
-  }
+    * {
+        transition: none !important;
+        animation: none !important;
+    }
+}
+
+/* 綁定畫面：員工編號輸入框 */
+.field {
+    width: 100%;
+    margin-top: 20px;
+}
+
+.field label {
+    display: block;
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 8px;
+    letter-spacing: 0.02em;
+}
+
+.field input {
+    width: 100%;
+    padding: 14px 16px;
+    border-radius: 10px;
+    border: 1.5px solid var(--line);
+    font-family: var(--font-body);
+    font-size: 16px;
+    color: var(--ink);
+    background: var(--paper-raised);
+    transition: border-color 0.15s ease;
+}
+
+.field input:focus {
+    outline: none;
+    border-color: var(--teal);
+}
+
+.field input::placeholder {
+    color: var(--muted);
+    opacity: 0.7;
+}
+
+.hint-text {
+    font-size: 12.5px;
+    color: var(--muted);
+    text-align: center;
+    margin-top: 8px;
+    line-height: 1.6;
 }

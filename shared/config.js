@@ -6,6 +6,7 @@
 const CONFIG = {
   // 從 LINE Developers「Add a LIFF app」建立後複製貼上
   LIFF_ID: '2010617290-IaR9AsfU',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbyBxJ_r1SWR7ebn2nipcWamFUKnuKVWfcD7RX5edoO02JKDpuAu45n16LMi9vK1AiKz3A/exec',
 
   // 之後接上 Kintone 時再填入，先保留結構
   KINTONE: {
