@@ -170,6 +170,9 @@
 
         async function start() {
             try {
+                document.querySelectorAll('.today-item, .stamp-zone svg').forEach(el => {
+                    el.classList.add('loading-pulse');
+                });
                 const profile = await LiffUtils.init();
                 if (!profile) return; // 正在導轉去登入
 
@@ -210,6 +213,10 @@
                 console.error(err);
                 setStatus('連接失敗，請確認 LIFF 或伺服器設定', 'error');
                 document.querySelector('.card').classList.add('ready');
+
+                document.querySelectorAll('.today-item, .stamp-zone svg').forEach(el => {
+                    el.classList.remove('loading-pulse');
+                });
             }
         }
 
