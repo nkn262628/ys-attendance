@@ -121,7 +121,9 @@
             if (status.checkIn) {
                 const t = new Date(status.checkIn).toLocaleTimeString('zh-TW', { hour12: false });
                 inTime.textContent = t;
+                inTime.closest('.today-item').classList.add('filled');
                 inBtn.disabled = true;
+                inBtn.textContent = '已完成上班打卡';
             } else {
                 inBtn.disabled = false;
             }
@@ -129,7 +131,9 @@
             if (status.checkOut) {
                 const t = new Date(status.checkOut).toLocaleTimeString('zh-TW', { hour12: false });
                 outTime.textContent = t;
+                outTime.closest('.today-item').classList.add('filled');
                 outBtn.disabled = true;
+                inBtn.textContent = '已完成上班打卡';
             } else {
                 outBtn.disabled = !status.checkIn; // 還沒上班打卡就先不能下班打卡
             }
@@ -201,6 +205,9 @@
                     document.getElementById('stampRing').style.strokeDashoffset = '0';
                     document.getElementById('stampRing').style.transition = 'stroke-dashoffset 0.6s ease';
                     document.getElementById('stampLabel').textContent = `上班打卡完成 · ${punchTime}`;
+                    document.getElementById('todayIn').textContent = punchTime;
+                    document.getElementById('todayIn').closest('.today-item').classList.add('filled');
+                    document.getElementById('btnCheckIn').textContent = '已完成上班打卡';
                     setStatus('上班打卡成功', 'ok');
                 } else {
                     setStatus(result.message, 'error');
@@ -222,6 +229,9 @@
                     const punchTime = new Date().toLocaleTimeString('zh-TW', { hour12: false });
                     document.getElementById('stampText').textContent = punchTime;
                     document.getElementById('stampLabel').textContent = `下班打卡完成 · ${punchTime}`;
+                    document.getElementById('todayOut').textContent = punchTime;
+                    document.getElementById('todayOut').closest('.today-item').classList.add('filled');
+                    document.getElementById('btnCheckOut').textContent = '已完成下班打卡';
                     setStatus('下班打卡成功', 'ok');
                 } else {
                     setStatus(result.message, 'error');
