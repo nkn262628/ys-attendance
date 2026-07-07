@@ -215,6 +215,7 @@
                     document.getElementById('todayIn').textContent = punchTime;
                     document.getElementById('todayIn').closest('.today-item').classList.add('filled');
                     document.getElementById('btnCheckIn').textContent = '已完成上班打卡';
+                    document.getElementById('btnCheckOut').disabled = false;
                     setStatus('上班打卡成功', 'ok', true);
                 } else {
                     setStatus(result.message, 'error');
@@ -239,7 +240,7 @@
                     document.getElementById('todayOut').textContent = punchTime;
                     document.getElementById('todayOut').closest('.today-item').classList.add('filled');
                     document.getElementById('btnCheckOut').textContent = '已完成下班打卡';
-                    setStatus('下班打卡成功', 'ok', true);
+                    setStatus('下班打卡成功', 'ok');
                 } else {
                     setStatus(result.message, 'error');
                     document.getElementById('btnCheckOut').disabled = false;
