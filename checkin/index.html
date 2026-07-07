@@ -157,6 +157,7 @@
             setStatus('打卡處理中...', null);
             try {
                 const result = await LiffUtils.punch('IN');
+                console.log('打卡回應:', result);
                 if (result.success) {
                     document.getElementById('stampText').textContent = '已打卡';
                     document.getElementById('stampRing').style.strokeDashoffset = '0';
