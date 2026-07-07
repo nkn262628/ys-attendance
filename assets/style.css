@@ -435,8 +435,3 @@ body {
     color: var(--navy-deep);
     font-variant-numeric: tabular-nums;
 }
-
-/* 已打卡按鈕的視覺提示 */
-.btn:disabled::after {
-    content: " ✓";
-}
