@@ -75,4 +75,18 @@ const LiffUtils = {
     });
     return await res.json();
   },
+
+  async getStatus() {
+    const res = await fetch(CONFIG.GAS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      redirect: 'follow',
+      body: JSON.stringify({
+        action: 'status',
+        empId: this.empId,
+        secret: CONFIG.CLIENT_SECRET,
+      }),
+    });
+    return await res.json();
+  },
 };

@@ -40,6 +40,18 @@
                 </div>
             </div>
 
+            <!-- 顯示今天時間的小欄位 -->
+            <div class="today-summary">
+                <div class="today-item">
+                    <span class="today-label">上班</span>
+                    <span class="today-time" id="todayIn">--:--</span>
+                </div>
+                <div class="today-item">
+                    <span class="today-label">下班</span>
+                    <span class="today-time" id="todayOut">--:--</span>
+                </div>
+            </div>
+
             <!-- 打卡印章 -->
             <div class="stamp-zone">
                 <svg viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg" id="stampSvg">
@@ -100,6 +112,29 @@
             statusBar.className = 'status' + (type ? ' ' + type : '');
         }
 
+        function renderTodayStatus(status) {
+            const inBtn = document.getElementById('btnCheckIn');
+            const outBtn = document.getElementById('btnCheckOut');
+            const inTime = document.getElementById('todayIn');
+            const outTime = document.getElementById('todayOut');
+
+            if (status.checkIn) {
+                const t = new Date(status.checkIn).toLocaleTimeString('zh-TW', { hour12: false });
+                inTime.textContent = t;
+                inBtn.disabled = true;
+            } else {
+                inBtn.disabled = false;
+            }
+
+            if (status.checkOut) {
+                const t = new Date(status.checkOut).toLocaleTimeString('zh-TW', { hour12: false });
+                outTime.textContent = t;
+                outBtn.disabled = true;
+            } else {
+                outBtn.disabled = !status.checkIn; // 還沒上班打卡就先不能下班打卡
+            }
+        }
+
         async function start() {
             try {
                 const profile = await LiffUtils.init();
@@ -131,6 +166,9 @@
                     document.getElementById('btnCheckOut').disabled = false;
                     document.getElementById('stampLabel').textContent = '準備打卡';
                     setStatus('已綁定，歡迎回來', 'ok');
+
+                    const today = await LiffUtils.getStatus();
+                    renderTodayStatus(today);
                 } else {
                     setStatus('尚未綁定員工資料，即將前往綁定頁面...', null);
                     setTimeout(() => {
