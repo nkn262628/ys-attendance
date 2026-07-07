@@ -111,6 +111,7 @@
 
     try {
       const result = await LiffUtils.bindEmployee(empId);
+      console.log('完整回應:', result);
 
       if (result.success) {
         setStatus(`綁定成功！歡迎 ${result.empName}，正在前往打卡頁...`, 'ok');
