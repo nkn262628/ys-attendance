@@ -300,6 +300,7 @@ body {
     letter-spacing: 0.01em;
     background: none;
     border: none;
+    transition: opacity 0.4s ease;
 }
 
 .status.ok {
@@ -402,8 +403,8 @@ body {
 
 .today-item {
     flex: 1;
-    background: var(--paper-raised);
-    border: 1px solid var(--line);
+    background: var(--paper);
+    border: 1.5px dashed var(--line);
     border-radius: 10px;
     padding: 10px 0;
     text-align: center;
@@ -433,4 +434,9 @@ body {
     font-size: 18px;
     color: var(--navy-deep);
     font-variant-numeric: tabular-nums;
+}
+
+/* 已打卡按鈕的視覺提示 */
+.btn:disabled::after {
+    content: " ✓";
 }

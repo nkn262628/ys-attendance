@@ -107,9 +107,16 @@
 
         const statusBar = document.getElementById('statusBar');
 
-        function setStatus(text, type) {
+        function setStatus(text, type, autoHide) {
             statusBar.textContent = text;
             statusBar.className = 'status' + (type ? ' ' + type : '');
+            statusBar.style.opacity = '1';
+            if (autoHide) {
+                clearTimeout(setStatus._t);
+                setStatus._t = setTimeout(() => {
+                    statusBar.style.opacity = '0';
+                }, 2500);
+            }
         }
 
         function renderTodayStatus(status) {
@@ -201,14 +208,14 @@
                 const result = await LiffUtils.punch('IN');
                 if (result.success) {
                     const punchTime = new Date().toLocaleTimeString('zh-TW', { hour12: false });
-                    document.getElementById('stampText').textContent = punchTime;
+                    document.getElementById('stampText').textContent = '上班已打卡';
                     document.getElementById('stampRing').style.strokeDashoffset = '0';
                     document.getElementById('stampRing').style.transition = 'stroke-dashoffset 0.6s ease';
-                    document.getElementById('stampLabel').textContent = `上班打卡完成 · ${punchTime}`;
+                    document.getElementById('stampLabel').textContent = '準備下班打卡';
                     document.getElementById('todayIn').textContent = punchTime;
                     document.getElementById('todayIn').closest('.today-item').classList.add('filled');
                     document.getElementById('btnCheckIn').textContent = '已完成上班打卡';
-                    setStatus('上班打卡成功', 'ok');
+                    setStatus('上班打卡成功', 'ok', true);
                 } else {
                     setStatus(result.message, 'error');
                     document.getElementById('btnCheckIn').disabled = false;
@@ -227,12 +234,12 @@
                 const result = await LiffUtils.punch('OUT');
                 if (result.success) {
                     const punchTime = new Date().toLocaleTimeString('zh-TW', { hour12: false });
-                    document.getElementById('stampText').textContent = punchTime;
-                    document.getElementById('stampLabel').textContent = `下班打卡完成 · ${punchTime}`;
+                    document.getElementById('stampText').textContent = '本日已完成';
+                    document.getElementById('stampLabel').textContent = '辛苦了，今天出勤已完成';
                     document.getElementById('todayOut').textContent = punchTime;
                     document.getElementById('todayOut').closest('.today-item').classList.add('filled');
                     document.getElementById('btnCheckOut').textContent = '已完成下班打卡';
-                    setStatus('下班打卡成功', 'ok');
+                    setStatus('下班打卡成功', 'ok', true);
                 } else {
                     setStatus(result.message, 'error');
                     document.getElementById('btnCheckOut').disabled = false;
