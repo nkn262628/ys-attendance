@@ -198,6 +198,7 @@
                     setStatus('已綁定，歡迎回來', 'ok', true);
 
                     const today = await LiffUtils.getStatus();
+                    alert(JSON.stringify(today)); 
                     renderTodayStatus(today);
                 } else {
                     setStatus('尚未綁定員工資料，即將前往綁定頁面...', null);
