@@ -54,7 +54,7 @@
                         <line x1="102" y1="60" x2="108" y2="60" />
                     </g>
                     <text x="60" y="66" text-anchor="middle" font-family="Space Grotesk, sans-serif" font-weight="600"
-                        font-size="15" fill="#14293D" id="stampText">尚未打卡</text>
+                        font-size="13" fill="#14293D" id="stampText">尚未打卡</text>
                 </svg>
                 <div class="stamp-label" id="stampLabel">等待 LINE 連接後即可打卡</div>
             </div>
@@ -158,10 +158,11 @@
             try {
                 const result = await LiffUtils.punch('IN');
                 if (result.success) {
-                    document.getElementById('stampText').textContent = '已打卡';
+                    const punchTime = new Date().toLocaleTimeString('zh-TW', { hour12: false });
+                    document.getElementById('stampText').textContent = punchTime;
                     document.getElementById('stampRing').style.strokeDashoffset = '0';
                     document.getElementById('stampRing').style.transition = 'stroke-dashoffset 0.6s ease';
-                    document.getElementById('stampLabel').textContent = '上班打卡完成';
+                    document.getElementById('stampLabel').textContent = `上班打卡完成 · ${punchTime}`;
                     setStatus('上班打卡成功', 'ok');
                 } else {
                     setStatus(result.message, 'error');
@@ -180,8 +181,9 @@
             try {
                 const result = await LiffUtils.punch('OUT');
                 if (result.success) {
-                    document.getElementById('stampText').textContent = '已打卡';
-                    document.getElementById('stampLabel').textContent = '下班打卡完成';
+                    const punchTime = new Date().toLocaleTimeString('zh-TW', { hour12: false });
+                    document.getElementById('stampText').textContent = punchTime;
+                    document.getElementById('stampLabel').textContent = `下班打卡完成 · ${punchTime}`;
                     setStatus('下班打卡成功', 'ok');
                 } else {
                     setStatus(result.message, 'error');
