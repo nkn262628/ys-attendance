@@ -78,7 +78,7 @@
 
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <script src="../shared/config.js"></script>
-    <script src="../shared/liff-utils.js"></script>
+    <script src="../shared/liff-utils.js?v=2"></script>
     <script>
         // 即時時鐘
         function updateClock() {
@@ -125,6 +125,7 @@
                 if (binding.blocked) {
                     setStatus(binding.message, 'error');
                 } else if (binding.bound) {
+                    LiffUtils.empId = binding.empId;
                     document.getElementById('userName').textContent = binding.empName; // 改顯示員工姓名
                     document.getElementById('btnCheckIn').disabled = false;
                     document.getElementById('btnCheckOut').disabled = false;
@@ -151,11 +152,46 @@
         });
 
         // 測試用：按下按鈕先做視覺回饋，之後這裡會換成真正呼叫 Kintone API
-        document.getElementById('btnCheckIn').addEventListener('click', () => {
-            document.getElementById('stampText').textContent = '已打卡';
-            document.getElementById('stampRing').style.strokeDashoffset = '0';
-            document.getElementById('stampRing').style.transition = 'stroke-dashoffset 0.6s ease';
-            document.getElementById('stampLabel').textContent = '上班打卡完成（測試）';
+        document.getElementById('btnCheckIn').addEventListener('click', async () => {
+            document.getElementById('btnCheckIn').disabled = true;
+            setStatus('打卡處理中...', null);
+            try {
+                const result = await LiffUtils.punch('IN');
+                if (result.success) {
+                    document.getElementById('stampText').textContent = '已打卡';
+                    document.getElementById('stampRing').style.strokeDashoffset = '0';
+                    document.getElementById('stampRing').style.transition = 'stroke-dashoffset 0.6s ease';
+                    document.getElementById('stampLabel').textContent = '上班打卡完成';
+                    setStatus('上班打卡成功', 'ok');
+                } else {
+                    setStatus(result.message, 'error');
+                    document.getElementById('btnCheckIn').disabled = false;
+                }
+            } catch (err) {
+                console.error(err);
+                setStatus('連線錯誤，請稍後再試', 'error');
+                document.getElementById('btnCheckIn').disabled = false;
+            }
+        });
+
+        document.getElementById('btnCheckOut').addEventListener('click', async () => {
+            document.getElementById('btnCheckOut').disabled = true;
+            setStatus('打卡處理中...', null);
+            try {
+                const result = await LiffUtils.punch('OUT');
+                if (result.success) {
+                    document.getElementById('stampText').textContent = '已打卡';
+                    document.getElementById('stampLabel').textContent = '下班打卡完成';
+                    setStatus('下班打卡成功', 'ok');
+                } else {
+                    setStatus(result.message, 'error');
+                    document.getElementById('btnCheckOut').disabled = false;
+                }
+            } catch (err) {
+                console.error(err);
+                setStatus('連線錯誤，請稍後再試', 'error');
+                document.getElementById('btnCheckOut').disabled = false;
+            }
         });
 
         start();

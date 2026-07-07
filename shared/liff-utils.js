@@ -3,7 +3,7 @@
    ============================================ */
 
 const LiffUtils = {
-  profile: null,
+  profile: null, empId: null,
 
   async init() {
     await liff.init({ liffId: CONFIG.LIFF_ID });
@@ -35,6 +35,7 @@ const LiffUtils = {
       body: JSON.stringify({
         action: 'lookup',
         lineUserId: this.profile.userId,
+        secret: CONFIG.CLIENT_SECRET,
       }),
     });
     return await res.json();
@@ -55,6 +56,21 @@ const LiffUtils = {
         action: 'bind',
         lineUserId: this.profile.userId,
         empId: empId,
+        secret: CONFIG.CLIENT_SECRET,
+      }),
+    });
+    return await res.json();
+  },
+  async punch(type) {
+    const res = await fetch(CONFIG.GAS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      redirect: 'follow',
+      body: JSON.stringify({
+        action: 'punch',
+        empId: this.empId,
+        type: type,
+        secret: CONFIG.CLIENT_SECRET,
       }),
     });
     return await res.json();
