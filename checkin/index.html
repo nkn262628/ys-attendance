@@ -189,9 +189,14 @@
                 document.querySelector('.card').classList.add('ready');
                 requestAnimationFrame(() => avatarBox.classList.add('loaded'));
 
-                // 新增：查詢是否已綁定員工資料
+                // 查詢是否已綁定員工資料
                 setStatus('已連接 LINE，查詢綁定狀態中...', null);
                 const binding = await LiffUtils.checkBinding();
+
+                //  查詢完停止呼吸動畫
+                document.querySelectorAll('.today-item, .stamp-zone svg').forEach(el => {
+                    el.classList.remove('loading-pulse');
+                });
 
                 if (binding.blocked) {
                     setStatus(binding.message, 'error');
