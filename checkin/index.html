@@ -235,9 +235,11 @@
         document.getElementById('btnCheckIn').addEventListener('click', async () => {
             const btn = document.getElementById('btnCheckIn');
             btn.disabled = true;
-            setStatus('打卡處理中...', null);
+            setStatus('定位中...', null);
             try {
-                const result = await LiffUtils.punch('IN');
+                const coords = await getCoords();
+                setStatus('打卡處理中...', null);
+                const result = await LiffUtils.punch('IN', coords);
                 if (result.success) {
                     setStatus('上班打卡成功', 'ok', true);
                     renderTodayStatus(await LiffUtils.getStatus());
@@ -252,12 +254,25 @@
             }
         });
 
+        function getCoords() {
+            return new Promise((resolve) => {
+                if (!navigator.geolocation) return resolve(null);
+                navigator.geolocation.getCurrentPosition(
+                    pos => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+                    () => resolve(null), // 使用者拒絕定位權限，就當作沒有座標，不擋打卡
+                    { timeout: 8000 }
+                );
+            });
+        }
+
         document.getElementById('btnCheckOut').addEventListener('click', async () => {
             const btn = document.getElementById('btnCheckOut');
             btn.disabled = true;
-            setStatus('打卡處理中...', null);
+            setStatus('定位中...', null);
             try {
-                const result = await LiffUtils.punch('OUT');
+                const coords = await getCoords();
+                setStatus('打卡處理中...', null);
+                const result = await LiffUtils.punch('OUT', coords);
                 if (result.success) {
                     setStatus('下班打卡成功', 'ok', true);
                     renderTodayStatus(await LiffUtils.getStatus());

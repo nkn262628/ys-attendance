@@ -61,7 +61,7 @@ const LiffUtils = {
     });
     return await res.json();
   },
-  async punch(type) {
+  async punch(type, coords) {
     const res = await fetch(CONFIG.GAS_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -70,6 +70,8 @@ const LiffUtils = {
         action: 'punch',
         empId: this.empId,
         type: type,
+        lat: coords?.lat,
+        lng: coords?.lng,
         secret: CONFIG.CLIENT_SECRET,
       }),
     });
