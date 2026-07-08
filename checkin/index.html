@@ -53,6 +53,8 @@
                 </div>
             </div>
 
+            <div class="attendance-note" id="attendanceNote"></div>
+
             <!-- 打卡印章 -->
             <div class="stamp-zone">
                 <svg viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg" id="stampSvg">
@@ -91,7 +93,7 @@
 
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <script src="../shared/config.js"></script>
-    <script src="../shared/liff-utils.js?v=2"></script>
+    <script src="../shared/liff-utils.js?v=3"></script>
     <script>
         // 即時時鐘
         function updateClock() {
@@ -166,6 +168,16 @@
                 stampText.textContent = '尚未打卡';
                 stampLabel.textContent = '準備打卡';
                 stampRing.style.strokeDashoffset = '326.7';
+            }
+            // 遲到／早退提示（共用 LiffUtils.formatAttendanceNote，跟月報表單日明細同一套文案邏輯）
+            const noteEl = document.getElementById('attendanceNote');
+            const noteText = LiffUtils.formatAttendanceNote(status.lateMinutes, status.earlyMinutes);
+            if (noteText) {
+                noteEl.textContent = noteText;
+                noteEl.classList.add('visible');
+            } else {
+                noteEl.textContent = '';
+                noteEl.classList.remove('visible');
             }
         }
 

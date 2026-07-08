@@ -107,5 +107,16 @@ const LiffUtils = {
     });
     return await res.json();
   },
+  /**
+ * 共用：把遲到／早退分鐘數組成顯示文字
+ * 打卡頁的今日提示、月報表的單日明細都呼叫這支，
+ * 避免兩邊各自維護一份文案邏輯，以後只改這裡就好
+ */
+  formatAttendanceNote(lateMinutes, earlyMinutes) {
+    const notes = [];
+    if (lateMinutes > 0) notes.push(`遲到 ${lateMinutes} 分鐘`);
+    if (earlyMinutes > 0) notes.push(`早退 ${earlyMinutes} 分鐘`);
+    return notes.join('・');
+  },
 };
 

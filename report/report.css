@@ -1,0 +1,433 @@
+/* ============================================
+   Y's Cloud 出勤系統 — 月報表頁面樣式
+   承接 style.css 的色彩 token，不新增主色，
+   靠留白、線條層次、陰影節奏把「高級感」做出來，
+   核心視覺：把打卡頁的「圓環印章」語彙延伸成
+   「出勤率圓環」，讓兩個頁面感覺是同一套系統
+   ============================================ */
+
+.report-card {
+    padding-bottom: 32px;
+}
+
+/* ---- 月份切換 ----
+   拿掉厚重的邊框按鈕，改成更輕、更安靜的樣式，
+   兩側加細線把「這是一個切換區塊」的邊界感做出來 */
+.month-switch {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    margin-top: 6px;
+    padding: 2px 0;
+}
+
+.month-switch button {
+    background: transparent;
+    border: none;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    font-family: var(--font-display);
+    font-size: 16px;
+    color: var(--muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s ease, color 0.15s ease, transform 0.08s ease;
+}
+
+.month-switch button:disabled {
+    color: var(--line);
+    cursor: not-allowed;
+}
+
+.month-switch button:not(:disabled):hover {
+    background: var(--teal-soft);
+    color: var(--teal-deep);
+}
+
+.month-switch button:not(:disabled):active {
+    transform: scale(0.9);
+}
+
+.month-label {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 17px;
+    color: var(--navy-deep);
+    letter-spacing: 0.03em;
+}
+
+.month-label .yr {
+    color: var(--muted);
+    font-weight: 500;
+    font-size: 12.5px;
+    letter-spacing: 0.04em;
+    margin-right: 7px;
+}
+
+/* ---- 出勤率圓環 + 統計列 ---- */
+.overview {
+    display: flex;
+    align-items: center;
+    gap: 22px;
+    width: 100%;
+    margin-top: 26px;
+    padding: 20px 18px;
+    background: var(--paper-raised);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    box-shadow: 0 1px 2px rgba(13, 27, 38, 0.03), 0 10px 28px -18px rgba(13, 27, 38, 0.35);
+    position: relative;
+    overflow: hidden;
+}
+
+/* 左側細細一條 teal 色帶，像帳本頁緣的裝訂線，統一與圓環顏色呼應 */
+.overview::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: linear-gradient(180deg, var(--teal) 0%, var(--navy) 100%);
+}
+
+.rate-ring {
+    position: relative;
+    width: 92px;
+    height: 92px;
+    flex-shrink: 0;
+}
+
+.rate-ring svg {
+    width: 100%;
+    height: 100%;
+    filter: drop-shadow(0 2px 4px rgba(31, 143, 134, 0.18));
+}
+
+.rate-ring .ring-num {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 20px;
+    fill: var(--navy-deep);
+    letter-spacing: 0.01em;
+}
+
+.rate-ring .ring-label {
+    font-size: 8.5px;
+    fill: var(--muted);
+    letter-spacing: 0.06em;
+}
+
+.stat-rows {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.stat-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    padding: 8px 0;
+}
+
+.stat-row+.stat-row {
+    border-top: 1px solid var(--line);
+}
+
+.stat-row .stat-label {
+    font-size: 12.5px;
+    color: var(--muted);
+    letter-spacing: 0.01em;
+}
+
+.stat-row .stat-value {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 15.5px;
+    color: var(--ink);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.01em;
+}
+
+.stat-row .stat-value.warn {
+    color: #A23B3B;
+}
+
+.stat-row .stat-value.teal {
+    color: var(--teal-deep);
+}
+
+/* ---- 小日曆 ---- */
+.calendar-section {
+    width: 100%;
+    margin-top: 30px;
+}
+
+.calendar-weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    margin-bottom: 8px;
+}
+
+.calendar-weekdays span {
+    text-align: center;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+}
+
+.calendar-weekdays span:first-child,
+.calendar-weekdays span:last-child {
+    color: #B7C1BE;
+}
+
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 6px;
+}
+
+.calendar-day {
+    position: relative;
+    aspect-ratio: 1 / 1;
+    border-radius: 10px;
+    background: var(--paper-raised);
+    border: 1px solid var(--line);
+    padding: 6px 3px 5px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    box-sizing: border-box;
+    cursor: default;
+    transition: border-color 0.12s ease, box-shadow 0.12s ease, transform 0.08s ease;
+}
+
+.calendar-day.pad {
+    visibility: hidden;
+}
+
+.calendar-day.weekend {
+    background: var(--paper);
+}
+
+.calendar-day.no-record {
+    opacity: 0.45;
+}
+
+.calendar-day.has-record {
+    cursor: pointer;
+}
+
+.calendar-day.has-record:active {
+    transform: scale(0.92);
+}
+
+/* 用 box-shadow 做內縮外框，避免 border-width 跳動造成的排版位移 */
+.calendar-day.is-today {
+    border-color: var(--navy);
+    box-shadow: 0 0 0 1px var(--navy);
+}
+
+.calendar-day.is-selected {
+    background: var(--teal-soft);
+    border-color: var(--teal);
+    box-shadow: 0 4px 10px -6px rgba(31, 143, 134, 0.5);
+}
+
+.calendar-day .date-num {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 11.5px;
+    color: var(--ink);
+    line-height: 1;
+}
+
+.calendar-day.weekend .date-num {
+    color: #ABB6B2;
+}
+
+.calendar-day .status-dot {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    box-shadow: 0 0 0 2px var(--paper-raised);
+}
+
+.calendar-day.weekend .status-dot {
+    box-shadow: 0 0 0 2px var(--paper);
+}
+
+.calendar-day .status-dot.ok {
+    background: var(--teal);
+}
+
+.calendar-day .status-dot.warn {
+    background: #A23B3B;
+}
+
+.calendar-day .mini-time {
+    margin-top: auto;
+    font-size: 8px;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+}
+
+.calendar-legend {
+    display: flex;
+    gap: 18px;
+    justify-content: center;
+    margin-top: 16px;
+    font-size: 10.5px;
+    color: var(--muted);
+    letter-spacing: 0.02em;
+}
+
+.calendar-legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.calendar-legend .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+}
+
+.calendar-legend .dot.ok {
+    background: var(--teal);
+}
+
+.calendar-legend .dot.warn {
+    background: #A23B3B;
+}
+
+.calendar-legend .dot.none {
+    background: var(--line);
+}
+
+/* ---- 單日明細 ----
+   從「色塊警示」改成「浮起卡片 + 左側色條」，
+   質感更接近收據存根，而不是警告框 */
+.day-detail {
+    width: 100%;
+    margin-top: 16px;
+    padding: 16px 18px;
+    background: var(--paper-raised);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    box-shadow: 0 1px 2px rgba(13, 27, 38, 0.03), 0 10px 24px -18px rgba(13, 27, 38, 0.4);
+    position: relative;
+    overflow: hidden;
+    display: none;
+    opacity: 0;
+    transform: translateY(-4px);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.day-detail::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: var(--teal);
+}
+
+.day-detail.has-warn::before {
+    background: #A23B3B;
+}
+
+.day-detail.visible {
+    display: block;
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.day-detail .dd-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.day-detail .dd-date {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 14.5px;
+    color: var(--navy-deep);
+    letter-spacing: 0.01em;
+}
+
+.day-detail .dd-status-pill {
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    padding: 4px 10px;
+    border-radius: 20px;
+    background: var(--teal-soft);
+    color: var(--teal-deep);
+}
+
+.day-detail .dd-status-pill.warn {
+    background: #FBEEEE;
+    color: #A23B3B;
+}
+
+.day-detail .dd-times {
+    display: flex;
+    gap: 22px;
+    margin-top: 12px;
+}
+
+.day-detail .dd-item .dd-label {
+    font-size: 10.5px;
+    color: var(--muted);
+    letter-spacing: 0.02em;
+}
+
+.day-detail .dd-item .dd-value {
+    margin-top: 3px;
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 16.5px;
+    color: var(--ink);
+    font-variant-numeric: tabular-nums;
+}
+
+.day-detail .dd-note {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px dashed var(--line);
+    font-size: 11.5px;
+    color: #A23B3B;
+    letter-spacing: 0.01em;
+}
+
+/* ---- 空月份提示 ---- */
+.empty-month {
+    width: 100%;
+    text-align: center;
+    padding: 48px 20px;
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.7;
+}
+
+.empty-month .em-icon {
+    font-family: var(--font-display);
+    font-size: 24px;
+    color: var(--line);
+    margin-bottom: 8px;
+    letter-spacing: 0.1em;
+}
