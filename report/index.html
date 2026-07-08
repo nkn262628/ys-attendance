@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>月報表 · Y's Cloud</title>
     <link rel="icon" type="image/png" href="../assets/favicon.png" />
-    <link rel="stylesheet" href="../assets/style.css" />
+    <link rel="stylesheet" href="report.css?v=1" />
     <link rel="stylesheet" href="report.css" />
 </head>
 
@@ -245,11 +245,13 @@
                 if (rec) {
                     cell.classList.add('has-record');
                     const warn = isWarnStatus(rec.status);
-                    const inTime = formatHM(rec.checkIn);
+                    const miniLabel = rec.workMinutes > 0
+                        ? `${(rec.workMinutes / 60).toFixed(1)}h`
+                        : (formatHM(rec.checkIn) || '');
                     cell.innerHTML = `
                         <span class="date-num">${day}</span>
                         <span class="status-dot ${warn ? 'warn' : 'ok'}"></span>
-                        <span class="mini-time">${inTime || ''}</span>
+                        <span class="mini-time">${miniLabel}</span>
                     `;
                     cell.addEventListener('click', () => showDayDetail(dateStr, rec, cell));
                 } else {
