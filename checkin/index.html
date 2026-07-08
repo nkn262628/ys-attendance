@@ -81,9 +81,9 @@
             <div class="status" id="statusBar">正在連接 LINE...</div>
 
             <!-- 測試用：登出重新測試登入流程，正式上線前移除 -->
-            <div class="dev-tool">
+            <!-- <div class="dev-tool">
                 <button id="btnLogout">登出，重新測試登入流程</button>
-            </div>
+            </div> -->
 
         </div>
     </div>
@@ -226,12 +226,12 @@
         }
 
         // 測試用：登出後重新整理頁面，會重新觸發登入流程
-        document.getElementById('btnLogout').addEventListener('click', () => {
-            liff.logout();
-            window.location.reload();
-        });
+        // document.getElementById('btnLogout').addEventListener('click', () => {
+        //     liff.logout();
+        //     window.location.reload();
+        // });
 
-        // 測試用：按下按鈕先做視覺回饋，之後這裡會換成真正呼叫 Kintone API
+        // 按下按鈕先做視覺回饋，之後這裡會換成真正呼叫 Kintone API
         document.getElementById('btnCheckIn').addEventListener('click', async () => {
             const btn = document.getElementById('btnCheckIn');
             btn.disabled = true;
