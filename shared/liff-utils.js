@@ -92,3 +92,19 @@ const LiffUtils = {
     return await res.json();
   },
 };
+
+async getMonthlyReport(year, month) {
+  const res = await fetch(CONFIG.GAS_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    redirect: 'follow',
+    body: JSON.stringify({
+      action: 'monthlyReport',
+      empId: this.empId,
+      year: year,
+      month: month,
+      secret: CONFIG.CLIENT_SECRET,
+    }),
+  });
+  return await res.json();
+},
