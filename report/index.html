@@ -8,7 +8,18 @@
     <link rel="icon" type="image/png" href="../assets/favicon.png" />
     <link rel="stylesheet" href="../assets/style.css" />
     <style>
-        /* 月報表頁面專用樣式，沿用 style.css 的色彩 token */
+        /* ============================================
+           月報表頁面專用樣式
+           承接 style.css 的色彩 token，
+           核心視覺：把打卡頁的「圓環印章」語彙延伸成
+           「出勤率圓環」，讓兩個頁面感覺是同一套系統
+           ============================================ */
+
+        .report-card {
+            padding-bottom: 28px;
+        }
+
+        /* ---- 月份切換 ---- */
         .month-switch {
             display: flex;
             align-items: center;
@@ -21,11 +32,12 @@
             background: var(--paper-raised);
             border: 1.5px solid var(--line);
             border-radius: 8px;
-            width: 40px;
-            height: 40px;
-            font-size: 18px;
+            width: 38px;
+            height: 38px;
+            font-size: 17px;
             color: var(--navy);
             cursor: pointer;
+            transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
         }
 
         .month-switch button:disabled {
@@ -41,56 +53,98 @@
         .month-label {
             font-family: var(--font-display);
             font-weight: 600;
-            font-size: 17px;
+            font-size: 16px;
             color: var(--navy-deep);
             letter-spacing: 0.02em;
         }
 
-        .summary-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
+        .month-label .yr {
+            color: var(--muted);
+            font-weight: 500;
+            font-size: 13px;
+            margin-right: 6px;
+        }
+
+        /* ---- 出勤率圓環 + 統計列（取代原本的四宮格） ---- */
+        .overview {
+            display: flex;
+            align-items: center;
+            gap: 20px;
             width: 100%;
             margin-top: 24px;
-        }
-
-        .summary-card {
+            padding: 18px 16px;
             background: var(--paper-raised);
             border: 1.5px solid var(--line);
-            border-radius: 10px;
-            padding: 14px;
-            text-align: center;
+            border-radius: 14px;
         }
 
-        .summary-card .label {
-            font-size: 12px;
-            color: var(--muted);
+        .rate-ring {
+            position: relative;
+            width: 92px;
+            height: 92px;
+            flex-shrink: 0;
+        }
+
+        .rate-ring svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .rate-ring .ring-num {
+            font-family: var(--font-display);
+            font-weight: 700;
+            font-size: 20px;
+            fill: var(--navy-deep);
+        }
+
+        .rate-ring .ring-label {
+            font-size: 8.5px;
+            fill: var(--muted);
             letter-spacing: 0.02em;
         }
 
-        .summary-card .value {
-            margin-top: 6px;
+        .stat-rows {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .stat-row {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            padding: 7px 0;
+        }
+
+        .stat-row + .stat-row {
+            border-top: 1px solid var(--line);
+        }
+
+        .stat-row .stat-label {
+            font-size: 12.5px;
+            color: var(--muted);
+        }
+
+        .stat-row .stat-value {
             font-family: var(--font-display);
-            font-weight: 700;
-            font-size: 22px;
-            color: var(--navy-deep);
+            font-weight: 600;
+            font-size: 15px;
+            color: var(--ink);
             font-variant-numeric: tabular-nums;
         }
 
-        .summary-card.work-total {
-            grid-column: 1 / -1;
-            background: var(--teal-soft);
-            border-color: var(--teal);
+        .stat-row .stat-value.warn {
+            color: #A23B3B;
         }
 
-        .summary-card.work-total .value {
+        .stat-row .stat-value.teal {
             color: var(--teal-deep);
         }
 
-        /* 小日曆 */
+        /* ---- 小日曆 ---- */
         .calendar-section {
             width: 100%;
-            margin-top: 28px;
+            margin-top: 26px;
         }
 
         .calendar-weekdays {
@@ -101,9 +155,14 @@
 
         .calendar-weekdays span {
             text-align: center;
-            font-size: 11px;
+            font-size: 10.5px;
             color: var(--muted);
-            letter-spacing: 0.02em;
+            letter-spacing: 0.03em;
+        }
+
+        .calendar-weekdays span:first-child,
+        .calendar-weekdays span:last-child {
+            color: #A9B4B0;
         }
 
         .calendar-grid {
@@ -113,61 +172,87 @@
         }
 
         .calendar-day {
-            aspect-ratio: 1 / 1.05;
-            border-radius: 8px;
+            position: relative;
+            aspect-ratio: 1 / 1;
+            border-radius: 9px;
             background: var(--paper-raised);
             border: 1px solid var(--line);
-            border-left: 3px solid var(--line);
-            padding: 5px 4px 4px;
+            padding: 5px 3px 4px;
             display: flex;
             flex-direction: column;
+            align-items: center;
             box-sizing: border-box;
+            cursor: default;
+            transition: border-color 0.12s ease, transform 0.08s ease;
         }
 
         .calendar-day.pad {
             visibility: hidden;
         }
 
-        .calendar-day.no-record {
+        .calendar-day.weekend {
             background: var(--paper);
-            opacity: 0.55;
         }
 
-        .calendar-day.status-ok {
-            border-left-color: var(--teal);
+        .calendar-day.no-record {
+            opacity: 0.5;
         }
 
-        .calendar-day.status-warn {
-            border-left-color: #A23B3B;
+        .calendar-day.has-record {
+            cursor: pointer;
+        }
+
+        .calendar-day.has-record:active {
+            transform: scale(0.94);
+        }
+
+        .calendar-day.is-today {
+            border-color: var(--navy);
+            border-width: 1.5px;
+        }
+
+        .calendar-day.is-selected {
+            background: var(--teal-soft);
+            border-color: var(--teal);
         }
 
         .calendar-day .date-num {
             font-family: var(--font-display);
             font-weight: 600;
-            font-size: 11px;
+            font-size: 11.5px;
             color: var(--ink);
             line-height: 1;
         }
 
-        .calendar-day .times {
-            margin-top: auto;
-            font-size: 8.5px;
-            line-height: 1.35;
-            color: var(--muted);
-            font-variant-numeric: tabular-nums;
-            letter-spacing: -0.01em;
+        .calendar-day.weekend .date-num {
+            color: #A9B4B0;
         }
 
-        .calendar-day .times b {
-            color: var(--ink);
-            font-weight: 600;
+        .calendar-day .status-dot {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+        }
+
+        .calendar-day .status-dot.ok { background: var(--teal); }
+        .calendar-day .status-dot.warn { background: #A23B3B; }
+
+        .calendar-day .mini-time {
+            margin-top: auto;
+            font-size: 8px;
+            color: var(--muted);
+            font-variant-numeric: tabular-nums;
+            letter-spacing: -0.02em;
         }
 
         .calendar-legend {
             display: flex;
             gap: 16px;
             justify-content: center;
-            margin-top: 12px;
+            margin-top: 14px;
             font-size: 11px;
             color: var(--muted);
         }
@@ -179,21 +264,97 @@
         }
 
         .calendar-legend .dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 2px;
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
         }
 
         .calendar-legend .dot.ok { background: var(--teal); }
         .calendar-legend .dot.warn { background: #A23B3B; }
         .calendar-legend .dot.none { background: var(--line); }
 
-        .empty-hint {
+        /* ---- 單日明細（點日期展開，取代擠在小格子裡的文字） ---- */
+        .day-detail {
+            width: 100%;
+            margin-top: 14px;
+            padding: 14px 16px;
+            background: var(--teal-soft);
+            border: 1px solid var(--teal);
+            border-radius: 12px;
+            display: none;
+        }
+
+        .day-detail.visible {
+            display: block;
+        }
+
+        .day-detail .dd-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .day-detail .dd-date {
+            font-family: var(--font-display);
+            font-weight: 600;
+            font-size: 14px;
+            color: var(--navy-deep);
+        }
+
+        .day-detail .dd-status-pill {
+            font-size: 11px;
+            font-weight: 600;
+            padding: 3px 9px;
+            border-radius: 20px;
+            background: var(--teal-deep);
+            color: #FFFFFF;
+        }
+
+        .day-detail .dd-status-pill.warn {
+            background: #A23B3B;
+        }
+
+        .day-detail .dd-times {
+            display: flex;
+            gap: 20px;
+            margin-top: 10px;
+        }
+
+        .day-detail .dd-item .dd-label {
+            font-size: 11px;
+            color: var(--muted);
+        }
+
+        .day-detail .dd-item .dd-value {
+            margin-top: 2px;
+            font-family: var(--font-display);
+            font-weight: 600;
+            font-size: 16px;
+            color: var(--ink);
+            font-variant-numeric: tabular-nums;
+        }
+
+        .day-detail .dd-note {
+            margin-top: 8px;
+            font-size: 11.5px;
+            color: var(--teal-deep);
+        }
+
+        /* ---- 空月份提示 ---- */
+        .empty-month {
             width: 100%;
             text-align: center;
-            padding: 32px 0;
+            padding: 40px 20px;
             color: var(--muted);
             font-size: 13px;
+            line-height: 1.7;
+        }
+
+        .empty-month .em-icon {
+            font-family: var(--font-display);
+            font-size: 26px;
+            color: var(--line);
+            margin-bottom: 6px;
         }
     </style>
 </head>
@@ -208,7 +369,7 @@
             <span class="sub">月報表</span>
         </div>
 
-        <div class="card">
+        <div class="card report-card">
 
             <!-- 使用者資訊 -->
             <div class="profile">
@@ -230,19 +391,31 @@
                 <button id="btnNextMonth" aria-label="下個月">›</button>
             </div>
 
-            <!-- 總覽數字 -->
-            <div class="summary-grid" id="summaryGrid">
-                <div class="summary-card">
-                    <div class="label">出勤天數</div>
-                    <div class="value" id="sumAttendance">--</div>
+            <!-- 出勤率圓環 + 統計列 -->
+            <div class="overview" id="overviewSection">
+                <div class="rate-ring">
+                    <svg viewBox="0 0 92 92">
+                        <circle cx="46" cy="46" r="38" stroke="#D8DFDD" stroke-width="7" fill="none" />
+                        <circle cx="46" cy="46" r="38" stroke="#1F8F86" stroke-width="7" fill="none"
+                            stroke-linecap="round" stroke-dasharray="238.8" stroke-dashoffset="238.8"
+                            transform="rotate(-90 46 46)" id="rateArc" />
+                        <text x="46" y="44" text-anchor="middle" class="ring-num" id="rateNum">--</text>
+                        <text x="46" y="58" text-anchor="middle" class="ring-label">出勤率</text>
+                    </svg>
                 </div>
-                <div class="summary-card">
-                    <div class="label">遲到 / 早退天數</div>
-                    <div class="value" id="sumLateEarly">--</div>
-                </div>
-                <div class="summary-card work-total">
-                    <div class="label">本月總工時</div>
-                    <div class="value" id="sumWorkTotal">--</div>
+                <div class="stat-rows">
+                    <div class="stat-row">
+                        <span class="stat-label">出勤天數</span>
+                        <span class="stat-value" id="sumAttendance">--</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">遲到 / 早退</span>
+                        <span class="stat-value warn" id="sumLateEarly">--</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">本月總工時</span>
+                        <span class="stat-value teal" id="sumWorkTotal">--</span>
+                    </div>
                 </div>
             </div>
 
@@ -259,6 +432,29 @@
                 </div>
             </div>
 
+            <!-- 點日期後顯示的單日明細 -->
+            <div class="day-detail" id="dayDetail">
+                <div class="dd-header">
+                    <span class="dd-date" id="ddDate">--</span>
+                    <span class="dd-status-pill" id="ddStatusPill">正常</span>
+                </div>
+                <div class="dd-times">
+                    <div class="dd-item">
+                        <div class="dd-label">上班</div>
+                        <div class="dd-value" id="ddCheckIn">--:--</div>
+                    </div>
+                    <div class="dd-item">
+                        <div class="dd-label">下班</div>
+                        <div class="dd-value" id="ddCheckOut">--:--</div>
+                    </div>
+                    <div class="dd-item">
+                        <div class="dd-label">工作時數</div>
+                        <div class="dd-value" id="ddWorkHours">--</div>
+                    </div>
+                </div>
+                <div class="dd-note" id="ddNote"></div>
+            </div>
+
             <div class="status" id="statusBar">正在連接 LINE...</div>
 
         </div>
@@ -272,17 +468,24 @@
         function setStatus(text, type) {
             statusBar.textContent = text;
             statusBar.className = 'status' + (type ? ' ' + type : '');
+            statusBar.style.opacity = text ? '1' : '0';
         }
 
         // 目前畫面顯示中的年月（不能切到比今天所在月份更未來）
         const today = new Date();
         let viewYear = today.getFullYear();
         let viewMonth = today.getMonth() + 1; // 1~12
+        let selectedDateStr = null;
 
         const monthLabel = document.getElementById('monthLabel');
         const btnPrev = document.getElementById('btnPrevMonth');
         const btnNext = document.getElementById('btnNextMonth');
         const calendarGrid = document.getElementById('calendarGrid');
+        const calendarSection = document.getElementById('calendarSection');
+        const overviewSection = document.getElementById('overviewSection');
+        const dayDetail = document.getElementById('dayDetail');
+
+        const RING_CIRCUMFERENCE = 238.8; // 2 * PI * 38，對應 SVG 圓環半徑
 
         function formatMinutesAsHM(totalMinutes) {
             const h = Math.floor(totalMinutes / 60);
@@ -294,28 +497,84 @@
             return iso ? new Date(iso).toLocaleTimeString('zh-TW', { hour12: false, hour: '2-digit', minute: '2-digit' }) : null;
         }
 
-        function statusClass(status) {
-            if (status === '遲到' || status === '早退' || status === '遲到早退') return 'status-warn';
-            return 'status-ok';
+        function isWarnStatus(status) {
+            return status === '遲到' || status === '早退' || status === '遲到早退';
         }
 
         function renderMonthLabel() {
-            monthLabel.textContent = `${viewYear} 年 ${viewMonth} 月`;
+            monthLabel.innerHTML = `<span class="yr">${viewYear}</span>${viewMonth} 月`;
             const isCurrentMonth = (viewYear === today.getFullYear() && viewMonth === today.getMonth() + 1);
             btnNext.disabled = isCurrentMonth;
         }
 
+        // 出勤率：用「本月已經過去的平日天數」當分母，而不是整月天數，
+        // 避免月初或還沒過完的月份看起來出勤率異常偏低
+        function countWeekdaysUpTo(year, month, lastConsideredDay) {
+            let count = 0;
+            for (let d = 1; d <= lastConsideredDay; d++) {
+                const wd = new Date(year, month - 1, d).getDay();
+                if (wd !== 0 && wd !== 6) count++;
+            }
+            return count;
+        }
+
+        function renderRing(attendanceDays, weekdayCount) {
+            const rateNum = document.getElementById('rateNum');
+            const rateArc = document.getElementById('rateArc');
+            if (weekdayCount <= 0) {
+                rateNum.textContent = '--';
+                rateArc.style.strokeDashoffset = RING_CIRCUMFERENCE;
+                return;
+            }
+            const rate = Math.min(1, attendanceDays / weekdayCount);
+            rateNum.textContent = `${Math.round(rate * 100)}%`;
+            rateArc.style.strokeDashoffset = String(RING_CIRCUMFERENCE * (1 - rate));
+        }
+
+        function hideDayDetail() {
+            dayDetail.classList.remove('visible');
+            selectedDateStr = null;
+            document.querySelectorAll('.calendar-day.is-selected').forEach(el => el.classList.remove('is-selected'));
+        }
+
+        function showDayDetail(dateStr, rec, cellEl) {
+            document.querySelectorAll('.calendar-day.is-selected').forEach(el => el.classList.remove('is-selected'));
+            cellEl.classList.add('is-selected');
+            selectedDateStr = dateStr;
+
+            const d = new Date(dateStr);
+            document.getElementById('ddDate').textContent =
+                `${d.getMonth() + 1} 月 ${d.getDate()} 日（${'日一二三四五六'[d.getDay()]}）`;
+
+            const pill = document.getElementById('ddStatusPill');
+            const warn = isWarnStatus(rec.status);
+            pill.textContent = rec.status || '正常';
+            pill.className = 'dd-status-pill' + (warn ? ' warn' : '');
+
+            document.getElementById('ddCheckIn').textContent = formatHM(rec.checkIn) || '--:--';
+            document.getElementById('ddCheckOut').textContent = formatHM(rec.checkOut) || '--:--';
+            document.getElementById('ddWorkHours').textContent = rec.workMinutes ? formatMinutesAsHM(rec.workMinutes) : '--';
+
+            const noteEl = document.getElementById('ddNote');
+            const notes = [];
+            if (rec.lateMinutes > 0) notes.push(`遲到 ${rec.lateMinutes} 分鐘`);
+            if (rec.earlyMinutes > 0) notes.push(`早退 ${rec.earlyMinutes} 分鐘`);
+            noteEl.textContent = notes.join('・');
+
+            dayDetail.classList.add('visible');
+        }
+
         function renderCalendar(daysData) {
-            // 用日期字串當 key 快速對照
             const byDate = {};
             daysData.forEach(d => { byDate[d.date] = d; });
 
             const firstWeekday = new Date(viewYear, viewMonth - 1, 1).getDay(); // 0=日
             const totalDays = new Date(viewYear, viewMonth, 0).getDate();
+            const todayStr = Utilities_formatDate(today);
 
             calendarGrid.innerHTML = '';
+            hideDayDetail();
 
-            // 月初前面補空白格，讓 1 號對齊正確星期欄位
             for (let i = 0; i < firstWeekday; i++) {
                 const pad = document.createElement('div');
                 pad.className = 'calendar-day pad';
@@ -324,22 +583,24 @@
 
             for (let day = 1; day <= totalDays; day++) {
                 const dateStr = `${viewYear}-${String(viewMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const weekday = new Date(viewYear, viewMonth - 1, day).getDay();
                 const rec = byDate[dateStr];
 
                 const cell = document.createElement('div');
                 cell.className = 'calendar-day';
+                if (weekday === 0 || weekday === 6) cell.classList.add('weekend');
+                if (dateStr === todayStr) cell.classList.add('is-today');
 
                 if (rec) {
-                    cell.classList.add(statusClass(rec.status));
+                    cell.classList.add('has-record');
+                    const warn = isWarnStatus(rec.status);
                     const inTime = formatHM(rec.checkIn);
-                    const outTime = formatHM(rec.checkOut);
                     cell.innerHTML = `
                         <span class="date-num">${day}</span>
-                        <span class="times">
-                            ${inTime ? `上<b>${inTime}</b>` : ''}
-                            ${outTime ? `<br>下<b>${outTime}</b>` : ''}
-                        </span>
+                        <span class="status-dot ${warn ? 'warn' : 'ok'}"></span>
+                        <span class="mini-time">${inTime || ''}</span>
                     `;
+                    cell.addEventListener('click', () => showDayDetail(dateStr, rec, cell));
                 } else {
                     cell.classList.add('no-record');
                     cell.innerHTML = `<span class="date-num">${day}</span>`;
@@ -349,13 +610,48 @@
             }
         }
 
+        // 簡化版的日期字串格式化（避免額外依賴 GAS 的 Utilities）
+        function Utilities_formatDate(d) {
+            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        }
+
         function renderReport(data) {
             const s = data.summary;
             document.getElementById('sumAttendance').textContent = `${s.attendanceDays} 天`;
             document.getElementById('sumLateEarly').textContent = `${s.lateDays} / ${s.earlyDays}`;
             document.getElementById('sumWorkTotal').textContent = formatMinutesAsHM(s.totalWorkMinutes);
 
-            renderCalendar(data.days || []);
+            const isCurrentMonth = (viewYear === today.getFullYear() && viewMonth === today.getMonth() + 1);
+            const lastConsideredDay = isCurrentMonth ? today.getDate() : new Date(viewYear, viewMonth, 0).getDate();
+            const weekdayCount = countWeekdaysUpTo(viewYear, viewMonth, lastConsideredDay);
+            renderRing(s.attendanceDays, weekdayCount);
+
+            if (!data.days || data.days.length === 0) {
+                overviewSection.style.display = 'none';
+                calendarSection.innerHTML = `
+                    <div class="empty-month">
+                        <div class="em-icon">◌</div>
+                        這個月還沒有任何打卡紀錄
+                    </div>
+                `;
+            } else {
+                overviewSection.style.display = '';
+                // 若日曆區塊先前被清空過（切到空月份後又切回來），重建結構
+                if (!document.getElementById('calendarGrid')) {
+                    calendarSection.innerHTML = `
+                        <div class="calendar-weekdays">
+                            <span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span>
+                        </div>
+                        <div class="calendar-grid" id="calendarGrid"></div>
+                        <div class="calendar-legend">
+                            <span><i class="dot ok"></i>正常</span>
+                            <span><i class="dot warn"></i>遲到／早退</span>
+                            <span><i class="dot none"></i>未打卡</span>
+                        </div>
+                    `;
+                }
+                renderCalendar(data.days);
+            }
         }
 
         async function loadReport() {
@@ -369,7 +665,6 @@
                 }
                 renderReport(data);
                 setStatus('', null);
-                statusBar.style.opacity = '0';
             } catch (err) {
                 console.error(err);
                 setStatus('連線錯誤，請稍後再試', 'error');
