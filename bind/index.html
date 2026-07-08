@@ -40,7 +40,7 @@
 
       <div class="field">
         <label for="empIdInput">員工編號</label>
-        <input type="text" id="empIdInput" placeholder="例如：EMP-001" autocomplete="off" />
+        <input type="text" id="empIdInput" placeholder="" autocomplete="off" />
       </div>
 
       <div class="actions">
@@ -137,6 +137,7 @@
       }
     });
 
+    document.getElementById('empIdInput').placeholder = `例如：${CONFIG.EMP_ID_EXAMPLE}`;
     start();
   </script>
 
