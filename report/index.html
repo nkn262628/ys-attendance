@@ -87,76 +87,106 @@
             color: var(--teal-deep);
         }
 
-        .day-list {
+        /* 小日曆 */
+        .calendar-section {
             width: 100%;
             margin-top: 28px;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
         }
 
-        .day-row {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            background: var(--paper-raised);
-            border: 1px solid var(--line);
-            border-radius: 10px;
-            padding: 12px 14px;
+        .calendar-weekdays {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            margin-bottom: 6px;
         }
 
-        .day-row .day-date {
-            width: 58px;
-            flex-shrink: 0;
-            font-family: var(--font-display);
-            font-weight: 600;
-            font-size: 14px;
-            color: var(--ink);
-            line-height: 1.3;
-        }
-
-        .day-row .day-date .weekday {
-            display: block;
-            font-family: var(--font-body);
-            font-weight: 400;
+        .calendar-weekdays span {
+            text-align: center;
             font-size: 11px;
             color: var(--muted);
-        }
-
-        .day-row .day-times {
-            flex: 1;
-            display: flex;
-            gap: 16px;
-            font-size: 13px;
-            color: var(--muted);
-            font-variant-numeric: tabular-nums;
-        }
-
-        .day-row .day-times b {
-            color: var(--ink);
-            font-weight: 600;
-        }
-
-        .badge {
-            flex-shrink: 0;
-            font-size: 11px;
-            font-weight: 600;
-            padding: 4px 10px;
-            border-radius: 999px;
             letter-spacing: 0.02em;
         }
 
-        .badge.normal {
-            background: var(--teal-soft);
-            color: var(--teal-deep);
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 5px;
         }
 
-        .badge.late,
-        .badge.early,
-        .badge.both {
-            background: #FBEEEE;
-            color: #A23B3B;
+        .calendar-day {
+            aspect-ratio: 1 / 1.05;
+            border-radius: 8px;
+            background: var(--paper-raised);
+            border: 1px solid var(--line);
+            border-left: 3px solid var(--line);
+            padding: 5px 4px 4px;
+            display: flex;
+            flex-direction: column;
+            box-sizing: border-box;
         }
+
+        .calendar-day.pad {
+            visibility: hidden;
+        }
+
+        .calendar-day.no-record {
+            background: var(--paper);
+            opacity: 0.55;
+        }
+
+        .calendar-day.status-ok {
+            border-left-color: var(--teal);
+        }
+
+        .calendar-day.status-warn {
+            border-left-color: #A23B3B;
+        }
+
+        .calendar-day .date-num {
+            font-family: var(--font-display);
+            font-weight: 600;
+            font-size: 11px;
+            color: var(--ink);
+            line-height: 1;
+        }
+
+        .calendar-day .times {
+            margin-top: auto;
+            font-size: 8.5px;
+            line-height: 1.35;
+            color: var(--muted);
+            font-variant-numeric: tabular-nums;
+            letter-spacing: -0.01em;
+        }
+
+        .calendar-day .times b {
+            color: var(--ink);
+            font-weight: 600;
+        }
+
+        .calendar-legend {
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+            margin-top: 12px;
+            font-size: 11px;
+            color: var(--muted);
+        }
+
+        .calendar-legend span {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .calendar-legend .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 2px;
+        }
+
+        .calendar-legend .dot.ok { background: var(--teal); }
+        .calendar-legend .dot.warn { background: #A23B3B; }
+        .calendar-legend .dot.none { background: var(--line); }
 
         .empty-hint {
             width: 100%;
@@ -216,8 +246,18 @@
                 </div>
             </div>
 
-            <!-- 每日明細 -->
-            <div class="day-list" id="dayList"></div>
+            <!-- 小日曆 -->
+            <div class="calendar-section" id="calendarSection">
+                <div class="calendar-weekdays">
+                    <span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span>
+                </div>
+                <div class="calendar-grid" id="calendarGrid"></div>
+                <div class="calendar-legend">
+                    <span><i class="dot ok"></i>正常</span>
+                    <span><i class="dot warn"></i>遲到／早退</span>
+                    <span><i class="dot none"></i>未打卡</span>
+                </div>
+            </div>
 
             <div class="status" id="statusBar">正在連接 LINE...</div>
 
@@ -242,6 +282,7 @@
         const monthLabel = document.getElementById('monthLabel');
         const btnPrev = document.getElementById('btnPrevMonth');
         const btnNext = document.getElementById('btnNextMonth');
+        const calendarGrid = document.getElementById('calendarGrid');
 
         function formatMinutesAsHM(totalMinutes) {
             const h = Math.floor(totalMinutes / 60);
@@ -249,22 +290,63 @@
             return `${h} 小時 ${m} 分`;
         }
 
-        function formatTimeOrDash(iso) {
-            return iso ? new Date(iso).toLocaleTimeString('zh-TW', { hour12: false, hour: '2-digit', minute: '2-digit' }) : '--:--';
+        function formatHM(iso) {
+            return iso ? new Date(iso).toLocaleTimeString('zh-TW', { hour12: false, hour: '2-digit', minute: '2-digit' }) : null;
         }
 
-        function statusBadgeClass(status) {
-            if (status === '遲到早退') return 'both';
-            if (status === '遲到') return 'late';
-            if (status === '早退') return 'early';
-            return 'normal';
+        function statusClass(status) {
+            if (status === '遲到' || status === '早退' || status === '遲到早退') return 'status-warn';
+            return 'status-ok';
         }
 
         function renderMonthLabel() {
             monthLabel.textContent = `${viewYear} 年 ${viewMonth} 月`;
-            // 不能切到未來月份
             const isCurrentMonth = (viewYear === today.getFullYear() && viewMonth === today.getMonth() + 1);
             btnNext.disabled = isCurrentMonth;
+        }
+
+        function renderCalendar(daysData) {
+            // 用日期字串當 key 快速對照
+            const byDate = {};
+            daysData.forEach(d => { byDate[d.date] = d; });
+
+            const firstWeekday = new Date(viewYear, viewMonth - 1, 1).getDay(); // 0=日
+            const totalDays = new Date(viewYear, viewMonth, 0).getDate();
+
+            calendarGrid.innerHTML = '';
+
+            // 月初前面補空白格，讓 1 號對齊正確星期欄位
+            for (let i = 0; i < firstWeekday; i++) {
+                const pad = document.createElement('div');
+                pad.className = 'calendar-day pad';
+                calendarGrid.appendChild(pad);
+            }
+
+            for (let day = 1; day <= totalDays; day++) {
+                const dateStr = `${viewYear}-${String(viewMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const rec = byDate[dateStr];
+
+                const cell = document.createElement('div');
+                cell.className = 'calendar-day';
+
+                if (rec) {
+                    cell.classList.add(statusClass(rec.status));
+                    const inTime = formatHM(rec.checkIn);
+                    const outTime = formatHM(rec.checkOut);
+                    cell.innerHTML = `
+                        <span class="date-num">${day}</span>
+                        <span class="times">
+                            ${inTime ? `上<b>${inTime}</b>` : ''}
+                            ${outTime ? `<br>下<b>${outTime}</b>` : ''}
+                        </span>
+                    `;
+                } else {
+                    cell.classList.add('no-record');
+                    cell.innerHTML = `<span class="date-num">${day}</span>`;
+                }
+
+                calendarGrid.appendChild(cell);
+            }
         }
 
         function renderReport(data) {
@@ -273,31 +355,7 @@
             document.getElementById('sumLateEarly').textContent = `${s.lateDays} / ${s.earlyDays}`;
             document.getElementById('sumWorkTotal').textContent = formatMinutesAsHM(s.totalWorkMinutes);
 
-            const dayList = document.getElementById('dayList');
-            dayList.innerHTML = '';
-
-            if (!data.days || data.days.length === 0) {
-                dayList.innerHTML = '<div class="empty-hint">這個月還沒有任何打卡紀錄</div>';
-                return;
-            }
-
-            data.days.forEach(d => {
-                const dt = new Date(d.date + 'T00:00:00');
-                const md = `${dt.getMonth() + 1}/${dt.getDate()}`;
-                const weekday = ['日', '一', '二', '三', '四', '五', '六'][dt.getDay()];
-
-                const row = document.createElement('div');
-                row.className = 'day-row';
-                row.innerHTML = `
-                    <div class="day-date">${md}<span class="weekday">星期${weekday}</span></div>
-                    <div class="day-times">
-                        <span>上班 <b>${formatTimeOrDash(d.checkIn)}</b></span>
-                        <span>下班 <b>${formatTimeOrDash(d.checkOut)}</b></span>
-                    </div>
-                    <span class="badge ${statusBadgeClass(d.status)}">${d.status || '正常'}</span>
-                `;
-                dayList.appendChild(row);
-            });
+            renderCalendar(data.days || []);
         }
 
         async function loadReport() {
