@@ -1,142 +1,145 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
+
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-<title>綁定員工資料 · Y's Cloud</title>
-<link rel="stylesheet" href="../assets/style.css" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>綁定員工資料 · Y's Cloud</title>
+  <link rel="stylesheet" href="../assets/style.css" />
 </head>
+
 <body>
 
-<div class="screen">
+  <div class="screen">
 
-  <div class="topbar">
-    <span class="brand">Y'S CLOUD</span>
-    <span class="sep">·</span>
-    <span class="sub">綁定員工資料</span>
+    <div class="topbar">
+      <span class="brand">Y'S CLOUD</span>
+      <span class="sep">·</span>
+      <span class="sub">綁定員工資料</span>
+    </div>
+
+    <div class="card">
+
+      <!-- 使用者資訊（LINE 帳號） -->
+      <div class="profile" style="margin-top: 12px;">
+        <div class="avatar" id="avatarBox">
+          <span class="placeholder">?</span>
+        </div>
+        <div class="info">
+          <div class="greeting">LINE 帳號</div>
+          <div class="name" id="userName">連接中...</div>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="hint-text">
+        這組 LINE 帳號尚未綁定員工資料<br />
+        請輸入你的員工編號完成綁定，之後即可開放打卡
+      </div>
+
+      <div class="field">
+        <label for="empIdInput">員工編號</label>
+        <input type="text" id="empIdInput" placeholder="例如：EMP-001" autocomplete="off" />
+      </div>
+
+      <div class="actions">
+        <button class="btn btn-primary" id="btnBind" disabled>完成綁定</button>
+      </div>
+
+      <div class="status" id="statusBar">正在連接 LINE...</div>
+
+    </div>
   </div>
 
-  <div class="card">
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <script src="../shared/config.js"></script>
+  <script src="../shared/liff-utils.js?v=2"></script>
+  <script>
+    const statusBar = document.getElementById('statusBar');
+    const btnBind = document.getElementById('btnBind');
+    const empIdInput = document.getElementById('empIdInput');
 
-    <!-- 使用者資訊（LINE 帳號） -->
-    <div class="profile" style="margin-top: 12px;">
-      <div class="avatar" id="avatarBox">
-        <span class="placeholder">?</span>
-      </div>
-      <div class="info">
-        <div class="greeting">LINE 帳號</div>
-        <div class="name" id="userName">連接中...</div>
-      </div>
-    </div>
+    function setStatus(text, type) {
+      statusBar.textContent = text;
+      statusBar.className = 'status' + (type ? ' ' + type : '');
+    }
 
-    <div class="divider"></div>
+    async function start() {
+      try {
+        const profile = await LiffUtils.init();
+        if (!profile) return; // 正在導轉去登入
 
-    <div class="hint-text">
-      這組 LINE 帳號尚未綁定員工資料<br />
-      請輸入你的員工編號完成綁定，之後即可開放打卡
-    </div>
+        document.getElementById('userName').textContent = profile.displayName;
 
-    <div class="field">
-      <label for="empIdInput">員工編號</label>
-      <input type="text" id="empIdInput" placeholder="例如：E0012" autocomplete="off" />
-    </div>
+        const avatarBox = document.getElementById('avatarBox');
+        if (profile.pictureUrl) {
+          avatarBox.innerHTML = `<img src="${profile.pictureUrl}" alt="頭像" />`;
+        } else {
+          avatarBox.innerHTML = `<span class="placeholder">${profile.displayName.charAt(0)}</span>`;
+        }
 
-    <div class="actions">
-      <button class="btn btn-primary" id="btnBind" disabled>完成綁定</button>
-    </div>
+        document.querySelector('.card').classList.add('ready');
+        requestAnimationFrame(() => avatarBox.classList.add('loaded'));
 
-    <div class="status" id="statusBar">正在連接 LINE...</div>
+        // 如果這個 LINE 帳號其實已經綁定過，直接導回打卡頁，不用再填一次
+        const binding = await LiffUtils.checkBinding();
+        if (binding.bound) {
+          setStatus('這組帳號已經綁定過了，正在導回打卡頁...', 'ok');
+          setTimeout(() => { window.location.href = '../checkin/index.html'; }, 800);
+          return;
+        }
 
-  </div>
-</div>
+        btnBind.disabled = false;
+        setStatus('請輸入員工編號完成綁定', null);
 
-<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-<script src="../shared/config.js"></script>
-<script src="../shared/liff-utils.js?v=2"></script>
-<script>
-  const statusBar = document.getElementById('statusBar');
-  const btnBind = document.getElementById('btnBind');
-  const empIdInput = document.getElementById('empIdInput');
-
-  function setStatus(text, type) {
-    statusBar.textContent = text;
-    statusBar.className = 'status' + (type ? ' ' + type : '');
-  }
-
-  async function start() {
-    try {
-      const profile = await LiffUtils.init();
-      if (!profile) return; // 正在導轉去登入
-
-      document.getElementById('userName').textContent = profile.displayName;
-
-      const avatarBox = document.getElementById('avatarBox');
-      if (profile.pictureUrl) {
-        avatarBox.innerHTML = `<img src="${profile.pictureUrl}" alt="頭像" />`;
-      } else {
-        avatarBox.innerHTML = `<span class="placeholder">${profile.displayName.charAt(0)}</span>`;
+      } catch (err) {
+        console.error(err);
+        setStatus('連接失敗，請確認 LIFF 或伺服器設定', 'error');
+        document.querySelector('.card').classList.add('ready');
       }
+    }
 
-      document.querySelector('.card').classList.add('ready');
-      requestAnimationFrame(() => avatarBox.classList.add('loaded'));
-
-      // 如果這個 LINE 帳號其實已經綁定過，直接導回打卡頁，不用再填一次
-      const binding = await LiffUtils.checkBinding();
-      if (binding.bound) {
-        setStatus('這組帳號已經綁定過了，正在導回打卡頁...', 'ok');
-        setTimeout(() => { window.location.href = '../checkin/index.html'; }, 800);
+    btnBind.addEventListener('click', async () => {
+      const empId = empIdInput.value.trim();
+      if (!empId) {
+        setStatus('請輸入員工編號', 'error');
         return;
       }
 
-      btnBind.disabled = false;
-      setStatus('請輸入員工編號完成綁定', null);
+      btnBind.disabled = true;
+      btnBind.textContent = '綁定中...';
+      setStatus('正在驗證員工編號...', null);
 
-    } catch (err) {
-      console.error(err);
-      setStatus('連接失敗，請確認 LIFF 或伺服器設定', 'error');
-      document.querySelector('.card').classList.add('ready');
-    }
-  }
+      try {
+        const result = await LiffUtils.bindEmployee(empId);
 
-  btnBind.addEventListener('click', async () => {
-    const empId = empIdInput.value.trim();
-    if (!empId) {
-      setStatus('請輸入員工編號', 'error');
-      return;
-    }
-
-    btnBind.disabled = true;
-    btnBind.textContent = '綁定中...';
-    setStatus('正在驗證員工編號...', null);
-
-    try {
-      const result = await LiffUtils.bindEmployee(empId);
-
-      if (result.success) {
-        setStatus(`綁定成功！歡迎 ${result.empName}，正在前往打卡頁...`, 'ok');
-        setTimeout(() => { window.location.href = '../checkin/index.html'; }, 1000);
-      } else {
-        setStatus(result.message || '綁定失敗，請確認員工編號是否正確', 'error');
+        if (result.success) {
+          setStatus(`綁定成功！歡迎 ${result.empName}，正在前往打卡頁...`, 'ok');
+          setTimeout(() => { window.location.href = '../checkin/index.html'; }, 1000);
+        } else {
+          setStatus(result.message || '綁定失敗，請確認員工編號是否正確', 'error');
+          btnBind.disabled = false;
+          btnBind.textContent = '完成綁定';
+        }
+      } catch (err) {
+        console.error(err);
+        setStatus('連線錯誤，請稍後再試', 'error');
         btnBind.disabled = false;
         btnBind.textContent = '完成綁定';
       }
-    } catch (err) {
-      console.error(err);
-      setStatus('連線錯誤，請稍後再試', 'error');
-      btnBind.disabled = false;
-      btnBind.textContent = '完成綁定';
-    }
-  });
+    });
 
-  // 按 Enter 鍵直接送出
-  empIdInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && !btnBind.disabled) {
-      btnBind.click();
-    }
-  });
+    // 按 Enter 鍵直接送出
+    empIdInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !btnBind.disabled) {
+        btnBind.click();
+      }
+    });
 
-  start();
-</script>
+    start();
+  </script>
 
 </body>
+
 </html>
