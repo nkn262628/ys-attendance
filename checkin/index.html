@@ -256,10 +256,16 @@
 
         function getCoords() {
             return new Promise((resolve) => {
-                if (!navigator.geolocation) return resolve(null);
+                if (!navigator.geolocation) {
+                    alert('瀏覽器不支援定位');
+                    return resolve(null);
+                }
                 navigator.geolocation.getCurrentPosition(
                     pos => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-                    () => resolve(null), // 使用者拒絕定位權限，就當作沒有座標，不擋打卡
+                    (err) => {
+                        alert('定位失敗，代碼：' + err.code + '，訊息：' + err.message);
+                        resolve(null);
+                    },
                     { timeout: 8000 }
                 );
             });
