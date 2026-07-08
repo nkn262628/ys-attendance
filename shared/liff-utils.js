@@ -111,11 +111,18 @@ const LiffUtils = {
  * 共用：把遲到／早退分鐘數組成顯示文字
  * 打卡頁的今日提示、月報表的單日明細都呼叫這支，
  * 避免兩邊各自維護一份文案邏輯，以後只改這裡就好
+ * 分鐘數 ≥60 時換算成「X 小時 Y 分鐘」
  */
   formatAttendanceNote(lateMinutes, earlyMinutes) {
+    const fmt = (mins) => {
+      const h = Math.floor(mins / 60);
+      const m = mins % 60;
+      if (h > 0) return m > 0 ? `${h} 小時 ${m} 分鐘` : `${h} 小時`;
+      return `${m} 分鐘`;
+    };
     const notes = [];
-    if (lateMinutes > 0) notes.push(`遲到 ${lateMinutes} 分鐘`);
-    if (earlyMinutes > 0) notes.push(`早退 ${earlyMinutes} 分鐘`);
+    if (lateMinutes > 0) notes.push(`遲到 ${fmt(lateMinutes)}`);
+    if (earlyMinutes > 0) notes.push(`早退 ${fmt(earlyMinutes)}`);
     return notes.join('・');
   },
 };
