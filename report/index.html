@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>月報表 · Y's Cloud</title>
+    <link rel="icon" type="image/png" href="../assets/favicon.png" />
+    <link rel="stylesheet" href="../assets/style.css" />
+    <style>
+        /* 月報表頁面專用樣式，沿用 style.css 的色彩 token */
+        .month-switch {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            margin-top: 4px;
+        }
+
+        .month-switch button {
+            background: var(--paper-raised);
+            border: 1.5px solid var(--line);
+            border-radius: 8px;
+            width: 40px;
+            height: 40px;
+            font-size: 18px;
+            color: var(--navy);
+            cursor: pointer;
+        }
+
+        .month-switch button:disabled {
+            color: var(--line);
+            cursor: not-allowed;
+        }
+
+        .month-switch button:not(:disabled):hover {
+            border-color: var(--teal);
+            color: var(--teal-deep);
+        }
+
+        .month-label {
+            font-family: var(--font-display);
+            font-weight: 600;
+            font-size: 17px;
+            color: var(--navy-deep);
+            letter-spacing: 0.02em;
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            width: 100%;
+            margin-top: 24px;
+        }
+
+        .summary-card {
+            background: var(--paper-raised);
+            border: 1.5px solid var(--line);
+            border-radius: 10px;
+            padding: 14px;
+            text-align: center;
+        }
+
+        .summary-card .label {
+            font-size: 12px;
+            color: var(--muted);
+            letter-spacing: 0.02em;
+        }
+
+        .summary-card .value {
+            margin-top: 6px;
+            font-family: var(--font-display);
+            font-weight: 700;
+            font-size: 22px;
+            color: var(--navy-deep);
+            font-variant-numeric: tabular-nums;
+        }
+
+        .summary-card.work-total {
+            grid-column: 1 / -1;
+            background: var(--teal-soft);
+            border-color: var(--teal);
+        }
+
+        .summary-card.work-total .value {
+            color: var(--teal-deep);
+        }
+
+        .day-list {
+            width: 100%;
+            margin-top: 28px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .day-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: var(--paper-raised);
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            padding: 12px 14px;
+        }
+
+        .day-row .day-date {
+            width: 58px;
+            flex-shrink: 0;
+            font-family: var(--font-display);
+            font-weight: 600;
+            font-size: 14px;
+            color: var(--ink);
+            line-height: 1.3;
+        }
+
+        .day-row .day-date .weekday {
+            display: block;
+            font-family: var(--font-body);
+            font-weight: 400;
+            font-size: 11px;
+            color: var(--muted);
+        }
+
+        .day-row .day-times {
+            flex: 1;
+            display: flex;
+            gap: 16px;
+            font-size: 13px;
+            color: var(--muted);
+            font-variant-numeric: tabular-nums;
+        }
+
+        .day-row .day-times b {
+            color: var(--ink);
+            font-weight: 600;
+        }
+
+        .badge {
+            flex-shrink: 0;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 4px 10px;
+            border-radius: 999px;
+            letter-spacing: 0.02em;
+        }
+
+        .badge.normal {
+            background: var(--teal-soft);
+            color: var(--teal-deep);
+        }
+
+        .badge.late,
+        .badge.early,
+        .badge.both {
+            background: #FBEEEE;
+            color: #A23B3B;
+        }
+
+        .empty-hint {
+            width: 100%;
+            text-align: center;
+            padding: 32px 0;
+            color: var(--muted);
+            font-size: 13px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="screen">
+
+        <div class="topbar">
+            <span class="brand">Y'S CLOUD</span>
+            <span class="sep">·</span>
+            <span class="sub">月報表</span>
+        </div>
+
+        <div class="card">
+
+            <!-- 使用者資訊 -->
+            <div class="profile">
+                <div class="avatar" id="avatarBox">
+                    <span class="placeholder">?</span>
+                </div>
+                <div class="info">
+                    <div class="greeting">月報表</div>
+                    <div class="name" id="userName">尚未連接</div>
+                </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <!-- 月份切換 -->
+            <div class="month-switch">
+                <button id="btnPrevMonth" aria-label="上個月">‹</button>
+                <span class="month-label" id="monthLabel">--</span>
+                <button id="btnNextMonth" aria-label="下個月">›</button>
+            </div>
+
+            <!-- 總覽數字 -->
+            <div class="summary-grid" id="summaryGrid">
+                <div class="summary-card">
+                    <div class="label">出勤天數</div>
+                    <div class="value" id="sumAttendance">--</div>
+                </div>
+                <div class="summary-card">
+                    <div class="label">遲到 / 早退天數</div>
+                    <div class="value" id="sumLateEarly">--</div>
+                </div>
+                <div class="summary-card work-total">
+                    <div class="label">本月總工時</div>
+                    <div class="value" id="sumWorkTotal">--</div>
+                </div>
+            </div>
+
+            <!-- 每日明細 -->
+            <div class="day-list" id="dayList"></div>
+
+            <div class="status" id="statusBar">正在連接 LINE...</div>
+
+        </div>
+    </div>
+
+    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <script src="../shared/config.js"></script>
+    <script src="../shared/liff-utils.js?v=2"></script>
+    <script>
+        const statusBar = document.getElementById('statusBar');
+        function setStatus(text, type) {
+            statusBar.textContent = text;
+            statusBar.className = 'status' + (type ? ' ' + type : '');
+        }
+
+        // 目前畫面顯示中的年月（不能切到比今天所在月份更未來）
+        const today = new Date();
+        let viewYear = today.getFullYear();
+        let viewMonth = today.getMonth() + 1; // 1~12
+
+        const monthLabel = document.getElementById('monthLabel');
+        const btnPrev = document.getElementById('btnPrevMonth');
+        const btnNext = document.getElementById('btnNextMonth');
+
+        function formatMinutesAsHM(totalMinutes) {
+            const h = Math.floor(totalMinutes / 60);
+            const m = totalMinutes % 60;
+            return `${h} 小時 ${m} 分`;
+        }
+
+        function formatTimeOrDash(iso) {
+            return iso ? new Date(iso).toLocaleTimeString('zh-TW', { hour12: false, hour: '2-digit', minute: '2-digit' }) : '--:--';
+        }
+
+        function statusBadgeClass(status) {
+            if (status === '遲到早退') return 'both';
+            if (status === '遲到') return 'late';
+            if (status === '早退') return 'early';
+            return 'normal';
+        }
+
+        function renderMonthLabel() {
+            monthLabel.textContent = `${viewYear} 年 ${viewMonth} 月`;
+            // 不能切到未來月份
+            const isCurrentMonth = (viewYear === today.getFullYear() && viewMonth === today.getMonth() + 1);
+            btnNext.disabled = isCurrentMonth;
+        }
+
+        function renderReport(data) {
+            const s = data.summary;
+            document.getElementById('sumAttendance').textContent = `${s.attendanceDays} 天`;
+            document.getElementById('sumLateEarly').textContent = `${s.lateDays} / ${s.earlyDays}`;
+            document.getElementById('sumWorkTotal').textContent = formatMinutesAsHM(s.totalWorkMinutes);
+
+            const dayList = document.getElementById('dayList');
+            dayList.innerHTML = '';
+
+            if (!data.days || data.days.length === 0) {
+                dayList.innerHTML = '<div class="empty-hint">這個月還沒有任何打卡紀錄</div>';
+                return;
+            }
+
+            data.days.forEach(d => {
+                const dt = new Date(d.date + 'T00:00:00');
+                const md = `${dt.getMonth() + 1}/${dt.getDate()}`;
+                const weekday = ['日', '一', '二', '三', '四', '五', '六'][dt.getDay()];
+
+                const row = document.createElement('div');
+                row.className = 'day-row';
+                row.innerHTML = `
+                    <div class="day-date">${md}<span class="weekday">星期${weekday}</span></div>
+                    <div class="day-times">
+                        <span>上班 <b>${formatTimeOrDash(d.checkIn)}</b></span>
+                        <span>下班 <b>${formatTimeOrDash(d.checkOut)}</b></span>
+                    </div>
+                    <span class="badge ${statusBadgeClass(d.status)}">${d.status || '正常'}</span>
+                `;
+                dayList.appendChild(row);
+            });
+        }
+
+        async function loadReport() {
+            renderMonthLabel();
+            setStatus('讀取月報表中...', null);
+            try {
+                const data = await LiffUtils.getMonthlyReport(viewYear, viewMonth);
+                if (data.error) {
+                    setStatus(data.message || '讀取月報表失敗', 'error');
+                    return;
+                }
+                renderReport(data);
+                setStatus('', null);
+                statusBar.style.opacity = '0';
+            } catch (err) {
+                console.error(err);
+                setStatus('連線錯誤，請稍後再試', 'error');
+            }
+        }
+
+        btnPrev.addEventListener('click', () => {
+            viewMonth--;
+            if (viewMonth < 1) { viewMonth = 12; viewYear--; }
+            loadReport();
+        });
+
+        btnNext.addEventListener('click', () => {
+            if (btnNext.disabled) return;
+            viewMonth++;
+            if (viewMonth > 12) { viewMonth = 1; viewYear++; }
+            loadReport();
+        });
+
+        async function start() {
+            try {
+                const profile = await LiffUtils.init();
+                if (!profile) return; // 正在導轉去登入
+
+                const avatarBox = document.getElementById('avatarBox');
+                if (profile.pictureUrl) {
+                    avatarBox.innerHTML = `<img src="${profile.pictureUrl}" alt="頭像" />`;
+                } else {
+                    avatarBox.innerHTML = `<span class="placeholder">${profile.displayName.charAt(0)}</span>`;
+                }
+                document.querySelector('.card').classList.add('ready');
+                requestAnimationFrame(() => avatarBox.classList.add('loaded'));
+
+                setStatus('已連接 LINE，查詢綁定狀態中...', null);
+                const binding = await LiffUtils.checkBinding();
+
+                if (binding.blocked) {
+                    setStatus(binding.message, 'error');
+                    return;
+                }
+                if (!binding.bound) {
+                    setStatus('尚未綁定員工資料，即將前往綁定頁面...', null);
+                    setTimeout(() => { window.location.href = '../bind/index.html'; }, 800);
+                    return;
+                }
+
+                LiffUtils.empId = binding.empId;
+                document.getElementById('userName').textContent = binding.empName;
+
+                await loadReport();
+            } catch (err) {
+                console.error(err);
+                setStatus('連接失敗，請確認 LIFF 或伺服器設定', 'error');
+                document.querySelector('.card').classList.add('ready');
+            }
+        }
+
+        start();
+    </script>
+
+</body>
+
+</html>
