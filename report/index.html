@@ -116,7 +116,7 @@
             padding: 7px 0;
         }
 
-        .stat-row + .stat-row {
+        .stat-row+.stat-row {
             border-top: 1px solid var(--line);
         }
 
@@ -237,8 +237,13 @@
             border-radius: 50%;
         }
 
-        .calendar-day .status-dot.ok { background: var(--teal); }
-        .calendar-day .status-dot.warn { background: #A23B3B; }
+        .calendar-day .status-dot.ok {
+            background: var(--teal);
+        }
+
+        .calendar-day .status-dot.warn {
+            background: #A23B3B;
+        }
 
         .calendar-day .mini-time {
             margin-top: auto;
@@ -269,9 +274,17 @@
             border-radius: 50%;
         }
 
-        .calendar-legend .dot.ok { background: var(--teal); }
-        .calendar-legend .dot.warn { background: #A23B3B; }
-        .calendar-legend .dot.none { background: var(--line); }
+        .calendar-legend .dot.ok {
+            background: var(--teal);
+        }
+
+        .calendar-legend .dot.warn {
+            background: #A23B3B;
+        }
+
+        .calendar-legend .dot.none {
+            background: var(--line);
+        }
 
         /* ---- 單日明細（點日期展開，取代擠在小格子裡的文字） ---- */
         .day-detail {
@@ -480,7 +493,6 @@
         const monthLabel = document.getElementById('monthLabel');
         const btnPrev = document.getElementById('btnPrevMonth');
         const btnNext = document.getElementById('btnNextMonth');
-        const calendarGrid = document.getElementById('calendarGrid');
         const calendarSection = document.getElementById('calendarSection');
         const overviewSection = document.getElementById('overviewSection');
         const dayDetail = document.getElementById('dayDetail');
@@ -565,6 +577,8 @@
         }
 
         function renderCalendar(daysData) {
+            const calendarGrid = document.getElementById('calendarGrid');
+            if (!calendarGrid) return;
             const byDate = {};
             daysData.forEach(d => { byDate[d.date] = d; });
 
