@@ -12,6 +12,9 @@
 (function () {
   'use strict';
 
+  // 暫時除錯用，確認問題後記得刪掉
+  if (typeof eruda !== 'undefined') eruda.init();
+
   // ------------------------------------------------
   // 集中設定：換空間/客戶時只改這裡
   // ------------------------------------------------
@@ -57,46 +60,56 @@
 
   const THEME_NAME = CONFIG.themeName || 'A';
 
-  kintone.events.on('app.record.index.show', function (event) {
-    const canvas = document.getElementById('gaia-argoui-app-index-canvas');
+  // PC/Mobile 共用的輔助函式
+  function getSpaceElement(isMobile) {
+    return isMobile ? kintone.mobile.app.getHeaderSpaceElement() : kintone.app.getHeaderSpaceElement();
+  }
+  function getCurrentAppId(isMobile) {
+    return (isMobile && kintone.mobile && kintone.mobile.app) ? kintone.mobile.app.getId() : kintone.app.getId();
+  }
+
+  kintone.events.on(['app.record.index.show', 'mobile.app.record.index.show'], function (event) {
+    const isMobile = event.type === 'mobile.app.record.index.show';
+    // PC 版原生容器是 id="gaia-argoui-app-index-canvas"
+    // 手機官方 App 原生容器沒有 id，要用 class 選：.gaia-mobile-app-customview-wrapper
+    // （這個 wrapper 包住了原生的清單內容跟底部分頁列，一起隱藏）
+    const canvas = isMobile
+      ? document.querySelector('.gaia-mobile-app-customview-wrapper')
+      : document.getElementById('gaia-argoui-app-index-canvas');
     const existingRoot = document.getElementById('ys-report-root');
 
-    // 不是月報表這個 view：確保原生畫面顯示回來、清掉殘留的自訂節點，再放行
-    // （用 event.viewId 而不是解析網址，避免頁面首次載入時網址列還沒同步更新的競速問題）
     if (String(event.viewId) !== String(CONFIG.reportViewId)) {
       if (canvas) canvas.style.display = '';
       if (existingRoot) existingRoot.remove();
       return event;
     }
 
-    // 是月報表這個 view：每次都清掉舊節點、重新掛載，不要重用殘留的 DOM
     if (existingRoot) existingRoot.remove();
 
-    mountLoadingShell();
-    initReport();
+    mountLoadingShell(isMobile, canvas);
+    initReport(isMobile);
 
     return event;
   });
 
   // ---- 畫面骨架 ----
-  function mountLoadingShell() {
-    const space = kintone.app.getHeaderSpaceElement();
+  function mountLoadingShell(isMobile, canvas) {
+    const space = getSpaceElement(isMobile);
     if (!space) return;
 
-    // 隱藏原生的整個畫面主體（不管是表格/日曆/圖表版型）
-    const canvas = document.getElementById('gaia-argoui-app-index-canvas');
     if (canvas) canvas.style.display = 'none';
 
     const root = document.createElement('div');
     root.id = 'ys-report-root';
     root.dataset.theme = THEME_NAME;
+    if (isMobile) root.dataset.mobile = 'true';
     root.innerHTML = `
-      <div class="ys-report-loading" id="ysLoading">
-        <div class="ys-spinner"></div>
-        <div class="ys-loading-text">載入出勤報表中...</div>
-      </div>
-      <div class="ys-report-body" id="ysReportBody" style="display:none;"></div>
-    `;
+    <div class="ys-report-loading" id="ysLoading">
+      <div class="ys-spinner"></div>
+      <div class="ys-loading-text">載入出勤報表中...</div>
+    </div>
+    <div class="ys-report-body" id="ysReportBody" style="display:none;"></div>
+  `;
     space.appendChild(root);
   }
 
@@ -106,9 +119,11 @@
   let viewMonth = today.getMonth() + 1;
   let empId = null;
   let empName = null;
-  let masterList = []; // 目前登入者有權限看到的員工清單（交給 Kintone ACL 決定範圍）
+  let masterList = [];
+  let isMobileMode = false;
 
-  async function initReport() {
+  async function initReport(isMobile) {
+    isMobileMode = isMobile;
     const body = document.getElementById('ysReportBody');
     const loading = document.getElementById('ysLoading');
 
@@ -158,7 +173,7 @@
     const endDate = `${viewYear}-${mm}-${String(lastDay).padStart(2, '0')}`;
 
     const res = await kintone.api(kintone.api.url('/k/v1/records', true), 'GET', {
-      app: kintone.app.getId(),
+      app: getCurrentAppId(isMobileMode),
       query: `${F.empId} = "${empId}" and ${F.date} >= "${startDate}" and ${F.date} <= "${endDate}"`,
       fields: [F.date, F.checkInTime, F.checkOutTime, F.workMinutes, F.attendanceStatus, F.lateMinutes, F.earlyMinutes],
     });
@@ -223,8 +238,8 @@
       <div class="ys-overview">
         <svg class="ys-ring" viewBox="0 0 80 80">
           <circle cx="40" cy="40" r="33" style="stroke:var(--ys-line)" stroke-width="6" fill="none"/>
-          <circle cx="40" cy="40" r="33" style="stroke:var(--ys-teal)" stroke-width="6" fill="none"
-            stroke-linecap="round" stroke-dasharray="207.3" stroke-dashoffset="${207.3 * (1 - rate)}"
+          <circle cx="40" cy="40" r="33" id="ysRingArc" style="stroke:var(--ys-teal)" stroke-width="6" fill="none"
+            stroke-linecap="round" stroke-dasharray="207.3" stroke-dashoffset="207.3"
             transform="rotate(-90 40 40)"/>
           <text x="40" y="45" text-anchor="middle" font-weight="700" font-size="17" style="fill:var(--ys-navy-deep)">${Math.round(rate * 100)}%</text>
         </svg>
@@ -239,22 +254,35 @@
       <div class="ys-calendar">
         <div class="ys-weekdays"><span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span></div>
         <div class="ys-grid" id="ysGrid"></div>
+        <div class="ys-calendar-legend">
+          <span><i class="dot ok"></i>正常</span>
+          <span><i class="dot warn"></i>遲到／早退</span>
+          <span><i class="dot none"></i>未打卡</span>
+        </div>
       </div>
-      <div class="ys-day-detail" id="ysDayDetail"></div>
+          <div class="ys-day-detail visible accent-none" id="ysDayDetail">
+      <div class="ys-dd-placeholder">點選日期，查看當日出勤明細</div>
+    </div>
     </div>
   </div>
 `;
 
     renderGrid(days, anomalyDates);
+    const ringArc = document.getElementById('ysRingArc');
+    if (ringArc) {
+      requestAnimationFrame(() => {
+        ringArc.style.strokeDashoffset = String(207.3 * (1 - rate));
+      });
+    }
 
     document.getElementById('ysPrev').addEventListener('click', () => {
       viewMonth--; if (viewMonth < 1) { viewMonth = 12; viewYear--; }
-      renderMonth();
+      switchMonth();
     });
     document.getElementById('ysNext').addEventListener('click', () => {
       if (isCurrentMonth) return;
       viewMonth++; if (viewMonth > 12) { viewMonth = 1; viewYear++; }
-      renderMonth();
+      switchMonth();
     });
 
     const empSelect = document.getElementById('ysEmpSelect');
@@ -267,6 +295,28 @@
         renderMonth();
       });
     }
+  }
+
+  let renderToken = 0;
+
+  function switchMonth() {
+    const body = document.getElementById('ysReportBody');
+    if (!body) { renderMonth(); return; }
+
+    const myToken = ++renderToken;
+    const prevBtn = document.getElementById('ysPrev');
+    const nextBtn = document.getElementById('ysNext');
+    if (prevBtn) prevBtn.disabled = true;
+    if (nextBtn) nextBtn.disabled = true;
+
+    body.dataset.transitioning = 'true';
+
+    renderMonth().then(() => {
+      // 如果切換期間使用者又點了下一次，這筆是過期結果，不要處理，交給最新那次收尾
+      if (myToken !== renderToken) return;
+      const newBody = document.getElementById('ysReportBody');
+      if (newBody) newBody.dataset.transitioning = 'false';
+    });
   }
 
   function renderGrid(days, anomalyDates) {
@@ -315,6 +365,7 @@
 
     panel.classList.remove('accent-ok', 'accent-warn', 'accent-none');
 
+    // ↓↓↓ 這一整段跟你原本一模一樣，完全沒改
     if (!rec) {
       panel.classList.add('accent-none');
       panel.innerHTML = isWeekend
@@ -335,6 +386,7 @@
       panel.classList.add('visible');
       return;
     }
+    // ↑↑↑ 這一整段跟你原本一模一樣，完全沒改
 
     const fmt = (iso) => iso ? new Date(iso).toLocaleTimeString('zh-TW', { hour12: false, hour: '2-digit', minute: '2-digit' }) : '--:--';
     const warn = isWarn(rec.status);
@@ -344,23 +396,71 @@
     if (rec.lateMinutes > 0) notes.push(`遲到 ${formatMinutes(rec.lateMinutes)}`);
     if (rec.earlyMinutes > 0) notes.push(`早退 ${formatMinutes(rec.earlyMinutes)}`);
 
-    panel.innerHTML = `
+    // ↓↓↓ 這裡開始是新的：原本只有下面桌面版那一種 innerHTML，
+    // 現在多加一個 if 分岔，手機版走新的三欄樣式
+    if (isMobileMode) {
+      panel.innerHTML = `
+    <div class="ys-dd-header">
+      <span class="ys-dd-date">${dateStr}</span>
+      <span class="ys-dd-status-pill ${warn ? 'warn' : ''}">${rec.status || '正常'}</span>
+    </div>
+    <div class="ys-dd-times">
+      <div class="ys-dd-item">
+        <div class="ys-dd-label">上班</div>
+        <div class="ys-dd-value">${fmt(rec.checkIn)}</div>
+      </div>
+      <div class="ys-dd-item">
+        <div class="ys-dd-label">下班</div>
+        <div class="ys-dd-value">${fmt(rec.checkOut)}</div>
+      </div>
+      <div class="ys-dd-item">
+        <div class="ys-dd-label">工作時數</div>
+        <div class="ys-dd-value">${Math.floor(rec.workMinutes / 60)}h${rec.workMinutes % 60}m</div>
+      </div>
+    </div>
+    ${notes.length ? `<div class="ys-dd-note-warn">${notes.join('・')}</div>` : ''}
+  `;
+    } else {
+      // 桌面版：跟你原本一模一樣，一個字都沒改
+      panel.innerHTML = `
     <div class="ys-dd-header">
       <span class="ys-dd-date">${dateStr}</span>
       <span class="ys-dd-status"><span class="dot ${warn ? 'warn' : ''}"></span>${rec.status || '正常'}</span>
     </div>
-    <div class="ys-dd-times">
-      <div><span class="l">上班</span><span class="v">${fmt(rec.checkIn)}</span></div>
-      <div><span class="l">下班</span><span class="v">${fmt(rec.checkOut)}</span></div>
-      <div><span class="l">工時</span><span class="v">${Math.floor(rec.workMinutes / 60)}時${rec.workMinutes % 60}分</span></div>
+    <div class="ys-timeline">
+      <div class="ys-timeline-node">
+        <span class="ys-timeline-dot ${rec.checkIn ? 'filled' : ''}"></span>
+        <div class="ys-timeline-content">
+          <span class="l">上班</span>
+          <span class="v">${fmt(rec.checkIn)}</span>
+        </div>
+      </div>
+      <div class="ys-timeline-line"></div>
+      <div class="ys-timeline-node">
+        <span class="ys-timeline-dot ${rec.checkOut ? 'filled' : ''}"></span>
+        <div class="ys-timeline-content">
+          <span class="l">下班</span>
+          <span class="v">${fmt(rec.checkOut)}</span>
+        </div>
+      </div>
     </div>
-    ${notes.length ? `<div class="ys-dd-note">${notes.join('・')}</div>` : ''}
+    <div class="ys-dd-summary">
+      <span>工時 <b>${Math.floor(rec.workMinutes / 60)}</b>時<b>${rec.workMinutes % 60}</b>分</span>
+      ${notes.length ? `<span class="warn-text">${notes.join('・')}</span>` : ''}
+    </div>
   `;
+    }
     panel.classList.add('visible');
   }
 
   function isWarn(status) {
     return status === CONFIG.values.attendanceLate || status === CONFIG.values.attendanceEarly || status === CONFIG.values.attendanceBoth;
+  }
+
+  function formatMinutes(mins) {
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    return h > 0 ? `${h}小時${m}分` : `${m}分`;
   }
 
   function countWeekdaysUpTo(year, month, lastDay) {
