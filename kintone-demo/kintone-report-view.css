@@ -562,6 +562,10 @@
     color: var(--ys-amber);
 }
 
+.ys-dd-summary .leave-text {
+    color: var(--ys-teal-deep);
+}
+
 .ys-dd-note {
     margin-top: 10px;
     font-size: 13px;
@@ -700,6 +704,15 @@
     border-top: 1px dashed var(--ys-line);
     font-size: 11.5px;
     color: var(--ys-amber);
+    letter-spacing: 0.01em;
+}
+
+#ys-report-root[data-mobile="true"] .ys-dd-note-leave {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px dashed var(--ys-line);
+    font-size: 11.5px;
+    color: var(--ys-teal-deep);
     letter-spacing: 0.01em;
 }
 

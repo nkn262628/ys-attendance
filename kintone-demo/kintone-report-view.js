@@ -247,49 +247,65 @@
   // ------------------------------------------------
   function resolveDisplayStatus(dateStr, rec) {
     const leaveInfo = leaveByDateMap[dateStr];
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    const isPastDay = dateStr < todayStr; // 今天以前才算「這天已經過去」
 
     if (!rec) {
       // 沒有打卡紀錄：規則不變，只有「整天」已核准假單才不算異常
       if (leaveInfo && leaveInfo.hours >= CONFIG.rules.workHoursPerDay) {
-        return { hasLeave: true, label: leaveInfo.types.join('/'), warn: false };
+        return { hasLeave: true, label: leaveInfo.types.join('/'), warn: false, lateIsProblem: false, earlyIsProblem: false };
       }
-      return { hasLeave: false, label: null, warn: false };
+      return { hasLeave: false, label: null, warn: false, lateIsProblem: false, earlyIsProblem: false };
     }
 
-    if (!isWarn(rec.status)) {
-      return { hasLeave: false, label: rec.status || '正常', warn: false };
+    if (!isWarn(rec, isPastDay)) {
+      return { hasLeave: false, label: rec.status || '正常', warn: false, lateIsProblem: false, earlyIsProblem: false };
     }
 
     // 沒有標準上下班時間可比對時，退回舊版寬鬆規則(當天有任何假單就蓋掉)
     if (!empStdStart || !empStdEnd) {
       if (leaveInfo) {
-        return { hasLeave: true, label: leaveInfo.types.join('/'), warn: false };
+        return { hasLeave: true, label: leaveInfo.types.join('/'), warn: false, lateIsProblem: false, earlyIsProblem: false };
       }
-      return { hasLeave: false, label: rec.status, warn: true };
+      // 退回寬鬆規則，沒有精確缺口可分辨，只能用原始 status 粗略判斷
+      return {
+        hasLeave: false,
+        label: rec.status,
+        warn: true,
+        lateIsProblem: (rec.status === CONFIG.values.attendanceLate || rec.status === CONFIG.values.attendanceBoth),
+        earlyIsProblem: (rec.status === CONFIG.values.attendanceEarly || rec.status === CONFIG.values.attendanceBoth || !rec.checkOut),
+      };
     }
 
     // 精確比對：假單起訖時間是否完整涵蓋造成遲到/早退的那段缺口
-    const gaps = computeAnomalyGaps(dateStr, rec, empStdStart, empStdEnd);
+    const gaps = computeAnomalyGaps(dateStr, rec, empStdStart, empStdEnd, isPastDay);
     const intervals = (leaveInfo && leaveInfo.intervals) || [];
 
     const lateCovered = intervalCoversGap(intervals, gaps.late);
     const earlyCovered = intervalCoversGap(intervals, gaps.early);
 
     if (lateCovered && earlyCovered) {
-      return { hasLeave: true, label: leaveInfo ? leaveInfo.types.join('/') : rec.status, warn: false };
+      return { hasLeave: true, label: leaveInfo ? leaveInfo.types.join('/') : rec.status, warn: false, lateIsProblem: false, earlyIsProblem: false };
     }
 
     // 只涵蓋一部分(例如遲到早退中，只有早上那段有請假)：
     // 剩下沒被涵蓋的那段仍視為異常，但標記 partial 讓畫面知道「已有假單、但沒蓋滿」
-    const remainingLabel = (!lateCovered && !earlyCovered)
-      ? rec.status
-      : (!lateCovered ? CONFIG.values.attendanceLate : CONFIG.values.attendanceEarly);
+    // lateIsProblem / earlyIsProblem 各自獨立判斷，不能只看整天 warn + 原始分鐘數，
+    // 否則「遲到已被蓋掉、只有早退沒蓋到」這種情況會把遲到也誤算進統計
+    const lateIsProblem = !!(gaps.late && !lateCovered);
+    const earlyIsProblem = !!(gaps.early && !earlyCovered);
+    const problems = [];
+    if (lateIsProblem) problems.push(CONFIG.values.attendanceLate);
+    if (earlyIsProblem) problems.push(gaps.earlyIsMissingCheckout ? '下班未打卡' : CONFIG.values.attendanceEarly);
+    const remainingLabel = problems.length > 0 ? problems.join('・') : rec.status;
 
     return {
       hasLeave: !!leaveInfo,
       label: remainingLabel,
       warn: true,
       partial: !!leaveInfo,
+      lateIsProblem,
+      earlyIsProblem,
     };
   }
 
@@ -324,7 +340,10 @@
     const body = document.getElementById('ysReportBody');
     const isCurrentMonth = (viewYear === today.getFullYear() && viewMonth === today.getMonth() + 1);
     const attendanceDays = days.length;
-    const lateDays = days.filter(d => resolveDisplayStatus(d.date, d).warn).length;
+    const dayDisplays = days.map(d => ({ day: d, display: resolveDisplayStatus(d.date, d) }));
+    const lateDays = dayDisplays.filter(x => x.display.lateIsProblem).length;
+    const earlyDays = dayDisplays.filter(x => x.display.earlyIsProblem).length;
+    const combinedWarnDays = dayDisplays.filter(x => x.display.lateIsProblem || x.display.earlyIsProblem).length;
     const totalWorkMinutes = days.reduce((s, d) => s + d.workMinutes, 0);
     const lastConsideredDay = isCurrentMonth ? today.getDate() : lastDay;
     const weekdayCount = countWeekdaysUpTo(viewYear, viewMonth, lastConsideredDay);
@@ -350,8 +369,8 @@
       </select>`
       : '';
 
-    const warningHtml = lateDays >= CONFIG.rules.lateWarningThreshold
-      ? `<div class="ys-warning-banner">本月遲到/早退已達 ${lateDays} 次，超過警戒值 ${CONFIG.rules.lateWarningThreshold} 次</div>`
+    const warningHtml = combinedWarnDays >= CONFIG.rules.lateWarningThreshold
+      ? `<div class="ys-warning-banner">本月遲到/早退已達 ${combinedWarnDays} 次，超過警戒值 ${CONFIG.rules.lateWarningThreshold} 次</div>`
       : '';
 
     const anomalyHtml = anomalyDates.length > 0
@@ -378,9 +397,10 @@
           <text x="40" y="45" text-anchor="middle" font-weight="700" font-size="17" style="fill:var(--ys-navy-deep)">${Math.round(rate * 100)}%</text>
         </svg>
         <div class="ys-stat-rows">
-          <div class="ys-stat-row"><span>出勤天數</span><span class="v">${attendanceDays} 天</span></div>
-          <div class="ys-stat-row"><span>遲到/早退天數</span><span class="v warn">${lateDays} 天</span></div>
-          <div class="ys-stat-row"><span>總工時</span><span class="v teal">${Math.floor(totalWorkMinutes / 60)} 小時 ${totalWorkMinutes % 60} 分</span></div>
+        <div class="ys-stat-row"><span>出勤天數</span><span class="v">${attendanceDays} 天</span></div>
+        <div class="ys-stat-row"><span>遲到天數</span><span class="v warn">${lateDays} 天</span></div>
+        <div class="ys-stat-row"><span>早退天數</span><span class="v warn">${earlyDays} 天</span></div>
+        <div class="ys-stat-row"><span>總工時</span><span class="v teal">${Math.floor(totalWorkMinutes / 60)} 小時 ${totalWorkMinutes % 60} 分</span></div>
         </div>
       </div>
     </div>
@@ -569,15 +589,19 @@
     panel.classList.add(display.hasLeave ? 'accent-leave' : (warn ? 'accent-warn' : 'accent-ok'));
 
     const notes = [];
+    let noteIsLeaveStyle = false;
     if (display.hasLeave && !display.warn) {
       notes.push(`已核准「${display.label}」，不列入異常`);
+      noteIsLeaveStyle = true;
     } else if (display.partial) {
       notes.push(`當天已有核准假單，但未完全涵蓋${display.label}的時段`);
       if (rec.lateMinutes > 0) notes.push(`遲到 ${formatMinutes(rec.lateMinutes)}`);
       if (rec.earlyMinutes > 0) notes.push(`早退 ${formatMinutes(rec.earlyMinutes)}`);
+      if (!rec.checkOut) notes.push('下班未打卡');
     } else {
       if (rec.lateMinutes > 0) notes.push(`遲到 ${formatMinutes(rec.lateMinutes)}`);
       if (rec.earlyMinutes > 0) notes.push(`早退 ${formatMinutes(rec.earlyMinutes)}`);
+      if (!rec.checkOut) notes.push('下班未打卡');
     }
 
     // ↓↓↓ 這裡開始是新的：原本只有下面桌面版那一種 innerHTML，
@@ -602,7 +626,7 @@
         <div class="ys-dd-value">${Math.floor(rec.workMinutes / 60)}h${rec.workMinutes % 60}m</div>
       </div>
     </div>
-    ${notes.length ? `<div class="ys-dd-note-warn">${notes.join('・')}</div>` : ''}
+    ${notes.length ? `<div class="${noteIsLeaveStyle ? 'ys-dd-note-leave' : 'ys-dd-note-warn'}">${notes.join('・')}</div>` : ''}
   `;
     } else {
       // 桌面版：跟你原本一模一樣，一個字都沒改
@@ -630,7 +654,7 @@
     </div>
     <div class="ys-dd-summary">
       <span>工時 <b>${Math.floor(rec.workMinutes / 60)}</b>時<b>${rec.workMinutes % 60}</b>分</span>
-      ${notes.length ? `<span class="warn-text">${notes.join('・')}</span>` : ''}
+       ${notes.length ? `<span class="${noteIsLeaveStyle ? 'leave-text' : 'warn-text'}">${notes.join('・')}</span>` : ''}
     </div>
   `;
     }
@@ -646,8 +670,8 @@
   }
 
   // 算出「造成遲到/早退的那段實際缺口」
-  function computeAnomalyGaps(dateStr, rec, stdStartStr, stdEndStr) {
-    const gaps = { late: null, early: null };
+  function computeAnomalyGaps(dateStr, rec, stdStartStr, stdEndStr, isPastDay) {
+    const gaps = { late: null, early: null, earlyIsMissingCheckout: false };
     if (!stdStartStr || !stdEndStr) return gaps; // 沒有標準時間可比對，交給呼叫端 fallback
 
     const stdStart = parseStdTimeOnDate(dateStr, stdStartStr);
@@ -657,7 +681,12 @@
       const actualIn = new Date(rec.checkIn);
       if (actualIn > stdStart) gaps.late = { start: stdStart, end: actualIn };
     }
-    if ((rec.status === CONFIG.values.attendanceEarly || rec.status === CONFIG.values.attendanceBoth) && rec.checkOut) {
+    // 下班完全沒有打卡紀錄：只有「這天已經過去」才當作缺口，
+    // 今天還沒下班（工作日還沒結束）不能算異常
+    if (!rec.checkOut && isPastDay) {
+      gaps.early = { start: stdStart, end: stdEnd };
+      gaps.earlyIsMissingCheckout = true;
+    } else if (rec.status === CONFIG.values.attendanceEarly || rec.status === CONFIG.values.attendanceBoth) {
       const actualOut = new Date(rec.checkOut);
       if (actualOut < stdEnd) gaps.early = { start: actualOut, end: stdEnd };
     }
@@ -671,8 +700,11 @@
     return intervals.some(iv => iv.start <= gap.start && iv.end >= gap.end);
   }
 
-  function isWarn(status) {
-    return status === CONFIG.values.attendanceLate || status === CONFIG.values.attendanceEarly || status === CONFIG.values.attendanceBoth;
+  function isWarn(rec, isPastDay) {
+    return rec.status === CONFIG.values.attendanceLate
+      || rec.status === CONFIG.values.attendanceEarly
+      || rec.status === CONFIG.values.attendanceBoth
+      || (isPastDay && !rec.checkOut); // 只有「這天已經過去」才把下班沒打卡當異常，今天還沒下班不算
   }
 
   function formatMinutes(mins) {
