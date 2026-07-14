@@ -107,6 +107,68 @@ const LiffUtils = {
     });
     return await res.json();
   },
+  async getLeaveFormConfig() {
+    const res = await fetch(CONFIG.GAS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      redirect: 'follow',
+      body: JSON.stringify({
+        action: 'leaveConfig',
+        empId: this.empId,
+        secret: CONFIG.CLIENT_SECRET,
+      }),
+    });
+    return await res.json();
+  },
+
+  async previewLeaveHours({ startTime, endTime }) {
+    const res = await fetch(CONFIG.GAS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      redirect: 'follow',
+      body: JSON.stringify({
+        action: 'previewLeaveHours',
+        empId: this.empId,
+        startTime: startTime,
+        endTime: endTime,
+        secret: CONFIG.CLIENT_SECRET,
+      }),
+    });
+    return await res.json();
+  },
+
+  async submitLeaveRequest({ leaveType, startTime, endTime, totalHours, note }) {
+    const res = await fetch(CONFIG.GAS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      redirect: 'follow',
+      body: JSON.stringify({
+        action: 'submitLeave',
+        empId: this.empId,
+        leaveType: leaveType,
+        startTime: startTime,
+        endTime: endTime,
+        totalHours: totalHours,
+        note: note,
+        secret: CONFIG.CLIENT_SECRET,
+      }),
+    });
+    return await res.json();
+  },
+
+  async getMyLeaveRequests() {
+    const res = await fetch(CONFIG.GAS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      redirect: 'follow',
+      body: JSON.stringify({
+        action: 'leaveHistory',
+        empId: this.empId,
+        secret: CONFIG.CLIENT_SECRET,
+      }),
+    });
+    return await res.json();
+  },
   /**
  * 共用：把遲到／早退分鐘數組成顯示文字
  * 打卡頁的今日提示、月報表的單日明細都呼叫這支，
