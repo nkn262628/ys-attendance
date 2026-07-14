@@ -506,12 +506,13 @@
       if (!rec && !display.hasLeave && anomalySet.has(dateStr)) cell.classList.add('anomaly');
 
       const inTime = rec && rec.checkIn ? new Date(rec.checkIn).toLocaleTimeString('zh-TW', { hour12: false, hour: '2-digit', minute: '2-digit' }) : '';
+      const miniLabel = rec ? (display.hasLeave ? display.label : inTime) : (display.hasLeave ? display.label : '');
 
       cell.innerHTML = `
         <span>${day}</span>
         ${rec ? `<span class="status-dot ${display.warn ? 'warn' : ''} ${display.hasLeave ? 'leave' : ''}"></span>` : (display.hasLeave ? `<span class="status-dot leave"></span>` : '')}
-        ${rec ? `<span class="mini-time">${inTime}</span>` : (display.hasLeave ? `<span class="mini-time">${display.label}</span>` : '')}
-      `;
+        <span class="mini-time">${miniLabel}</span>
+      `; 
       cell.addEventListener('click', () => showDayDetail(dateStr, rec, weekday === 0 || weekday === 6, anomalySet.has(dateStr)));
       grid.appendChild(cell);
     }
