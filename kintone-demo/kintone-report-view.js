@@ -336,6 +336,7 @@
     const dayDisplays = days.map(d => ({ day: d, display: resolveDisplayStatus(d.date, d) }));
     const lateDays = dayDisplays.filter(x => x.display.lateIsProblem).length;
     const earlyDays = dayDisplays.filter(x => x.display.earlyIsProblem).length;
+    const partialDays = dayDisplays.filter(x => x.display.partial).length;
     const combinedWarnDays = dayDisplays.filter(x => x.display.lateIsProblem || x.display.earlyIsProblem).length;
     const totalWorkMinutes = days.reduce((s, d) => s + d.workMinutes, 0);
     const lastConsideredDay = isCurrentMonth ? today.getDate() : lastDay;
@@ -370,6 +371,10 @@
       ? `<div class="ys-warning-banner ys-warning-anomaly">有 ${anomalyDates.length} 天平日尚無打卡紀錄，請人工確認是否為漏打卡</div>`
       : '';
 
+    const partialHtml = partialDays > 0
+      ? `<div class="ys-warning-banner ys-warning-partial">有 ${partialDays} 天已核准假單但未完全涵蓋當日異常（例如下班未打卡），請確認是否需要調整假單或補登打卡</div>`
+      : '';
+
     body.innerHTML = `
   <div class="ys-layout">
     <div class="ys-sidebar">
@@ -381,6 +386,7 @@
       </div>
       ${warningHtml}
       ${anomalyHtml}
+      ${partialHtml}
       <div class="ys-overview">
         <svg class="ys-ring" viewBox="0 0 80 80">
           <circle cx="40" cy="40" r="33" style="stroke:var(--ys-line)" stroke-width="6" fill="none"/>
@@ -391,10 +397,8 @@
         </svg>
         <div class="ys-stat-rows">
         <div class="ys-stat-row"><span>出勤天數</span><span class="v">${attendanceDays} 天</span></div>
-        <div class="ys-stat-row"><span>遲到天數</span><span class="v warn">${lateDays} 天</span></div>
-        <div class="ys-stat-row"><span>早退天數</span><span class="v warn">${earlyDays} 天</span></div>
+        <div class="ys-stat-row"><span>遲到 / 早退</span><span class="v warn">${lateDays} / ${earlyDays}</span></div>
         <div class="ys-stat-row"><span>總工時</span><span class="v teal">${Math.floor(totalWorkMinutes / 60)} 小時 ${totalWorkMinutes % 60} 分</span></div>
-        </div>
       </div>
     </div>
     <div class="ys-calendar-panel">
@@ -583,14 +587,12 @@
 
     const notes = [];
     let noteIsLeaveStyle = false;
-    if (display.hasLeave && !display.warn) {
-      notes.push(`已核准「${display.label}」，不列入異常`);
-      noteIsLeaveStyle = true;
-    } else {
-      // 只列出「真的還沒被假單蓋掉」的問題，各自一行，不寫解釋句、不重複
-      if (display.lateIsProblem) notes.push(`遲到 ${formatMinutes(rec.lateMinutes)}`);
-      if (display.earlyIsProblem) notes.push(display.earlyIsMissingCheckout ? '下班未打卡' : `早退 ${formatMinutes(rec.earlyMinutes)}`);
+    if (display.hasLeave) {
+      notes.push(display.warn ? `已核准「${display.label}」` : `已核准「${display.label}」，不列入異常`);
+      noteIsLeaveStyle = !display.warn; // 完全涵蓋才用teal的leave樣式，partial維持amber警示色
     }
+    if (display.lateIsProblem) notes.push(`遲到 ${formatMinutes(rec.lateMinutes)}`);
+    if (display.earlyIsProblem) notes.push(display.earlyIsMissingCheckout ? '下班未打卡' : `早退 ${formatMinutes(rec.earlyMinutes)}`);
 
     // ↓↓↓ 這裡開始是新的：原本只有下面桌面版那一種 innerHTML，
     // 現在多加一個 if 分岔，手機版走新的三欄樣式
@@ -598,7 +600,7 @@
       panel.innerHTML = `
     <div class="ys-dd-header">
       <span class="ys-dd-date">${dateStr}</span>
-      <span class="ys-dd-status-pill ${display.hasLeave ? 'leave' : (warn ? 'warn' : '')}">${display.hasLeave ? display.label : (rec.status || '正常')}</span>
+      <span class="ys-dd-status-pill ${warn ? 'warn' : (display.hasLeave ? 'leave' : '')}">${display.hasLeave ? display.label : (rec.status || '正常')}</span>
     </div>
     <div class="ys-dd-times">
       <div class="ys-dd-item">
@@ -621,7 +623,7 @@
       panel.innerHTML = `
     <div class="ys-dd-header">
       <span class="ys-dd-date">${dateStr}</span>
-      <span class="ys-dd-status"><span class="dot ${display.hasLeave ? 'leave' : (warn ? 'warn' : '')}"></span>${display.hasLeave ? display.label : (rec.status || '正常')}</span>
+      <span class="ys-dd-status"><span class="dot ${warn ? 'warn' : (display.hasLeave ? 'leave' : '')}"></span>${display.hasLeave ? display.label : (rec.status || '正常')}</span>
     </div>
     <div class="ys-timeline">
       <div class="ys-timeline-node">

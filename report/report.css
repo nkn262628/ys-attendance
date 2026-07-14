@@ -480,3 +480,21 @@
     margin-bottom: 8px;
     letter-spacing: 0.1em;
 }
+
+.partial-banner {
+    display: none;
+    width: 100%;
+    margin-top: 14px;
+    padding: 10px 14px;
+    background: var(--amber-soft);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--amber);
+    border-radius: 10px;
+    color: var(--amber);
+    font-size: 12px;
+    line-height: 1.6;
+}
+
+.partial-banner.visible {
+    display: block;
+}

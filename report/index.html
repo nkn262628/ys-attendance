@@ -69,7 +69,7 @@
                     </div>
                 </div>
             </div>
-
+            <div class="partial-banner" id="partialBanner"></div>
             <!-- 小日曆 -->
             <div class="calendar-section" id="calendarSection">
                 <div class="calendar-weekdays">
@@ -242,7 +242,7 @@
             if (ddTimes) ddTimes.style.display = '';
             const warn = isWarnStatus(rec);
             pill.textContent = rec.hasLeave ? rec.leaveLabel : (rec.status || '正常');
-            pill.className = 'dd-status-pill' + (rec.hasLeave ? ' leave' : (warn ? ' warn' : ''));
+            pill.className = 'dd-status-pill' + (warn ? ' warn' : (rec.hasLeave ? ' leave' : ''));
             dayDetail.classList.toggle('has-warn', warn);
             dayDetail.classList.toggle('has-leave', rec.hasLeave && !warn);
 
@@ -250,16 +250,23 @@
             document.getElementById('ddCheckOut').textContent = formatHM(rec.checkOut) || '--:--';
             document.getElementById('ddWorkHours').textContent = rec.workMinutes ? formatMinutesAsHM(rec.workMinutes) : '--';
 
+            function buildProblemText(rec) {
+                const parts = [];
+                if (rec.lateIsProblem) parts.push(`遲到${rec.lateMinutes ? ' ' + formatMinutesAsHM(rec.lateMinutes) : ''}`);
+                if (rec.earlyIsProblem) parts.push(rec.earlyIsMissingCheckout ? '下班未打卡' : `早退${rec.earlyMinutes ? ' ' + formatMinutesAsHM(rec.earlyMinutes) : ''}`);
+                return parts.join('・');
+            }
+
             let noteText, noteClass = 'dd-note';
             if (rec.hasLeave && !warn) {
                 noteText = `已核准「${rec.leaveLabel}」，不列入異常`;
                 noteClass += ' dd-note-leave';
-            } else if (rec.partial) {
-                const base = LiffUtils.formatAttendanceNote(rec.lateMinutes, rec.earlyMinutes) || '';
-                noteText = `當天已有核准假單，但未完全涵蓋${rec.leaveLabel || '異常'}的時段。${base}`;
+            } else if (rec.hasLeave && warn) {
+                const problemText = buildProblemText(rec);
+                noteText = `已核准「${rec.leaveLabel}」${problemText ? '，惟仍有 ' + problemText : ''}`;
                 noteClass += ' dd-note-alert';
             } else {
-                noteText = LiffUtils.formatAttendanceNote(rec.lateMinutes, rec.earlyMinutes) || '';
+                noteText = buildProblemText(rec) || LiffUtils.formatAttendanceNote(rec.lateMinutes, rec.earlyMinutes) || '';
                 noteClass += warn ? ' dd-note-alert' : '';
             }
             ddNote.textContent = noteText;
@@ -307,7 +314,7 @@
                 if (rec) {
                     cell.classList.add('has-record');
                     const warn = isWarnStatus(rec);
-                    const dotClass = rec.hasLeave ? 'leave' : (warn ? 'warn' : 'ok');
+                    const dotClass = warn ? 'warn' : (rec.hasLeave ? 'leave' : 'ok');
                     const miniLabel = rec.hasLeave
                         ? rec.leaveLabel
                         : (rec.workMinutes > 0 ? `${(rec.workMinutes / 60).toFixed(1)}h` : (formatHM(rec.checkIn) || ''));
@@ -347,6 +354,17 @@
             document.getElementById('sumAttendance').textContent = `${s.attendanceDays} 天`;
             document.getElementById('sumLateEarly').textContent = `${s.lateDays} / ${s.earlyDays}`;
             document.getElementById('sumWorkTotal').textContent = formatMinutesAsHM(s.totalWorkMinutes);
+
+            const partialBanner = document.getElementById('partialBanner');
+            const partialCount = (data.days || []).filter(d => d.partial).length;
+            if (partialBanner) {
+                if (partialCount > 0) {
+                    partialBanner.textContent = `有 ${partialCount} 天已核准假單但未完全涵蓋當日異常（例如下班未打卡），請確認是否需要調整假單或補登打卡`;
+                    partialBanner.classList.add('visible');
+                } else {
+                    partialBanner.classList.remove('visible');
+                }
+            }
 
             const isCurrentMonth = (viewYear === today.getFullYear() && viewMonth === today.getMonth() + 1);
             const lastConsideredDay = isCurrentMonth ? today.getDate() : new Date(viewYear, viewMonth, 0).getDate();

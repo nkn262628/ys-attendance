@@ -232,6 +232,11 @@
     color: var(--ys-muted);
 }
 
+.ys-warning-partial {
+    border-left-color: var(--ys-amber);
+    color: var(--ys-amber);
+}
+
 /* ---- 總覽卡片 ---- */
 .ys-overview {
     display: flex;
