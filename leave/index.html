@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>請假申請 · Y's Cloud</title>
+    <link rel="icon" type="image/png" href="../assets/favicon.png" />
+    <link rel="stylesheet" href="../assets/style.css?v=2" />
+    <link rel="stylesheet" href="leave.css?v=1" />
+</head>
+
+<body>
+
+    <div class="screen">
+
+        <div class="topbar">
+            <span class="brand">Y'S CLOUD</span>
+            <span class="sep">·</span>
+            <span class="sub">請假申請</span>
+        </div>
+
+        <div class="card leave-card">
+
+            <!-- 使用者資訊 -->
+            <div class="profile">
+                <div class="avatar" id="avatarBox">
+                    <span class="placeholder">?</span>
+                </div>
+                <div class="info">
+                    <div class="greeting">請假申請</div>
+                    <div class="name" id="userName">尚未連接</div>
+                </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <!-- 假別額度總覽 -->
+            <div class="quota-section" id="quotaSection">
+                <div class="quota-scroll" id="quotaScroll">
+                    <!-- JS 動態產生 quota-card -->
+                </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <!-- 請假申請表單 -->
+            <form class="leave-form" id="leaveForm">
+
+                <div class="lf-field">
+                    <label for="leaveType">假別</label>
+                    <select id="leaveType" required>
+                        <option value="" disabled selected>請選擇假別</option>
+                    </select>
+                    <div class="lf-hint" id="leaveTypeHint"></div>
+                </div>
+
+                <div class="lf-row">
+                    <div class="lf-field">
+                        <label for="startDate">開始日期</label>
+                        <input type="date" id="startDate" required />
+                    </div>
+                    <div class="lf-field">
+                        <label for="startTime">開始時間</label>
+                        <select id="startTime" required></select>
+                    </div>
+                </div>
+
+                <div class="lf-row">
+                    <div class="lf-field">
+                        <label for="endDate">結束日期</label>
+                        <input type="date" id="endDate" required />
+                    </div>
+                    <div class="lf-field">
+                        <label for="endTime">結束時間</label>
+                        <select id="endTime" required></select>
+                    </div>
+                </div>
+
+                <!-- 同日：系統自動試算，唯讀顯示 -->
+                <div class="lf-field lf-preview" id="previewField">
+                    <label>請假時數（系統自動試算）</label>
+                    <div class="lf-preview-value" id="previewValue">請先選擇假別與時間</div>
+                </div>
+
+                <!-- 跨日：改成手動輸入，只有偵測到跨日才顯示 -->
+                <div class="lf-field lf-manual-hours" id="manualHoursField" style="display:none;">
+                    <label for="manualHours">跨日假單，請填寫請假總時數</label>
+                    <input type="number" id="manualHours" min="1" step="1" placeholder="例如：16（以每日 8 小時計算）" />
+                    <div class="lf-hint">跨日假單目前採簡化計算，請自行加總天數 × 每日工時。</div>
+                </div>
+
+                <div class="lf-field">
+                    <label for="leaveNote">備註（選填）</label>
+                    <textarea id="leaveNote" rows="2" placeholder="需要補充說明時可填寫"></textarea>
+                </div>
+
+                <button type="submit" class="btn btn-primary" id="btnSubmit" disabled>送出申請</button>
+            </form>
+
+            <div class="status" id="statusBar">正在連接 LINE...</div>
+
+            <div class="divider"></div>
+
+            <!-- 過去申請紀錄 -->
+            <div class="history-section">
+                <div class="history-header">
+                    <span class="history-title">過去申請紀錄</span>
+                    <button class="history-refresh" id="btnRefreshHistory" aria-label="重新整理">⟳</button>
+                </div>
+                <div class="history-list" id="historyList">
+                    <div class="history-empty">載入中...</div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <script src="../shared/config.js"></script>
+    <script src="../shared/liff-utils.js?v=4"></script>
+    <script>
+        const statusBar = document.getElementById('statusBar');
+        function setStatus(text, type, autoHide) {
+            statusBar.textContent = text;
+            statusBar.className = 'status' + (type ? ' ' + type : '');
+            statusBar.style.opacity = text ? '1' : '0';
+            if (autoHide) {
+                clearTimeout(setStatus._t);
+                setStatus._t = setTimeout(() => { statusBar.style.opacity = '0'; }, 2500);
+            }
+        }
+
+        // ------------------------------------------------
+        // 時間下拉選單：只允許整點或 30 分，避免顆粒度在前端就先違規
+        // ------------------------------------------------
+        function buildTimeOptions(selectEl) {
+            selectEl.innerHTML = '<option value="" disabled selected>--:--</option>';
+            for (let h = 0; h < 24; h++) {
+                ['00', '30'].forEach(m => {
+                    const val = `${String(h).padStart(2, '0')}:${m}`;
+                    const opt = document.createElement('option');
+                    opt.value = val;
+                    opt.textContent = val;
+                    selectEl.appendChild(opt);
+                });
+            }
+        }
+        buildTimeOptions(document.getElementById('startTime'));
+        buildTimeOptions(document.getElementById('endTime'));
+
+        // ------------------------------------------------
+        // 狀態顯示對照（配合 leave-request-lifecycle.js 的 statusValues）
+        // ------------------------------------------------
+        const STATUS_MAP = {
+            '未處理': { label: '未送出 / 已駁回', cls: 'muted' },
+            '申請中': { label: '審核中', cls: 'warn' },
+            '簽核完成': { label: '已核准', cls: 'ok' },
+        };
+
+        let leaveConfig = null; // GAS 回傳：假別清單、額度、員工標準工時
+        let previewToken = 0;   // 避免非同步試算結果互相蓋掉
+
+        function renderQuotaCards(leaveTypes) {
+            const scroll = document.getElementById('quotaScroll');
+            scroll.innerHTML = '';
+            const withQuota = leaveTypes.filter(t => t.remainingHours !== null && t.remainingHours !== undefined);
+
+            if (withQuota.length === 0) {
+                scroll.innerHTML = '<div class="quota-empty">目前沒有需要額度管理的假別</div>';
+                return;
+            }
+
+            withQuota.forEach(t => {
+                const pct = t.totalHours > 0 ? Math.min(100, Math.round((t.remainingHours / t.totalHours) * 100)) : 0;
+                const low = pct <= 20;
+                const card = document.createElement('div');
+                card.className = 'quota-card' + (low ? ' quota-low' : '');
+                card.innerHTML = `
+                    <div class="quota-type">${t.label}</div>
+                    <div class="quota-remaining">${t.remainingHours}<span class="quota-unit">小時</span></div>
+                    <div class="quota-bar"><div class="quota-bar-fill" style="width:${pct}%"></div></div>
+                    <div class="quota-total">總額度 ${t.totalHours} 小時</div>
+                `;
+                scroll.appendChild(card);
+            });
+        }
+
+        function renderLeaveTypeOptions(leaveTypes) {
+            const select = document.getElementById('leaveType');
+            select.innerHTML = '<option value="" disabled selected>請選擇假別</option>';
+            leaveTypes.forEach(t => {
+                const opt = document.createElement('option');
+                opt.value = t.code;
+                opt.textContent = t.label;
+                select.appendChild(opt);
+            });
+        }
+
+        function updateLeaveTypeHint() {
+            const code = document.getElementById('leaveType').value;
+            const hintEl = document.getElementById('leaveTypeHint');
+            const t = leaveConfig && leaveConfig.leaveTypes.find(x => x.code === code);
+            if (!t) { hintEl.textContent = ''; return; }
+
+            const parts = [];
+            if (t.remainingHours !== null && t.remainingHours !== undefined) {
+                parts.push(`剩餘額度 ${t.remainingHours} 小時`);
+            }
+            if (t.monthlyLimitDays) {
+                parts.push(`每月最多 ${t.monthlyLimitDays} 天`);
+            }
+            hintEl.textContent = parts.join('・');
+        }
+
+        function getDateTimeValue(dateId, timeId) {
+            const d = document.getElementById(dateId).value;
+            const t = document.getElementById(timeId).value;
+            if (!d || !t) return null;
+            return `${d}T${t}:00`;
+        }
+
+        function isSameDaySelection() {
+            const sd = document.getElementById('startDate').value;
+            const ed = document.getElementById('endDate').value;
+            return sd && ed && sd === ed;
+        }
+
+        function refreshFormMode() {
+            const sameDay = isSameDaySelection();
+            document.getElementById('previewField').style.display = sameDay ? '' : 'none';
+            document.getElementById('manualHoursField').style.display = sameDay ? 'none' : '';
+        }
+
+        async function refreshPreview() {
+            refreshFormMode();
+            if (!isSameDaySelection()) return;
+
+            const startTime = getDateTimeValue('startDate', 'startTime');
+            const endTime = getDateTimeValue('endDate', 'endTime');
+            const previewEl = document.getElementById('previewValue');
+
+            if (!startTime || !endTime) {
+                previewEl.textContent = '請先選擇假別與時間';
+                previewEl.classList.remove('lf-preview-error');
+                return;
+            }
+
+            const myToken = ++previewToken;
+            previewEl.textContent = '試算中...';
+            previewEl.classList.remove('lf-preview-error');
+
+            try {
+                const result = await LiffUtils.previewLeaveHours({ startTime, endTime });
+                if (myToken !== previewToken) return; // 使用者又改了輸入，這筆結果已過期
+                if (result && result.ok) {
+                    previewEl.textContent = `${result.hours} 小時`;
+                } else {
+                    previewEl.textContent = (result && result.message) || '時間不符合規則，請調整';
+                    previewEl.classList.add('lf-preview-error');
+                }
+            } catch (err) {
+                if (myToken !== previewToken) return;
+                console.error(err);
+                previewEl.textContent = '試算失敗，請稍後再試';
+                previewEl.classList.add('lf-preview-error');
+            }
+        }
+
+        ['startDate', 'startTime', 'endDate', 'endTime'].forEach(id => {
+            document.getElementById(id).addEventListener('change', refreshPreview);
+        });
+        document.getElementById('leaveType').addEventListener('change', updateLeaveTypeHint);
+
+        function renderHistory(records) {
+            const list = document.getElementById('historyList');
+            if (!records || records.length === 0) {
+                list.innerHTML = '<div class="history-empty">目前沒有請假紀錄</div>';
+                return;
+            }
+            list.innerHTML = '';
+            records.forEach(r => {
+                const statusInfo = STATUS_MAP[r.status] || { label: r.status, cls: 'muted' };
+                const sameDay = r.startTime.slice(0, 10) === r.endTime.slice(0, 10);
+                const dateLabel = sameDay
+                    ? formatDateLabel(r.startTime)
+                    : `${formatDateLabel(r.startTime)} - ${formatDateLabel(r.endTime)}`;
+                const timeLabel = sameDay
+                    ? `${formatTimeLabel(r.startTime)} - ${formatTimeLabel(r.endTime)}`
+                    : '';
+
+                const item = document.createElement('div');
+                item.className = 'history-item';
+                item.innerHTML = `
+                    <div class="history-item-top">
+                        <span class="history-leave-type">${r.leaveTypeLabel || r.leaveType}</span>
+                        <span class="history-status-pill ${statusInfo.cls}">${statusInfo.label}</span>
+                    </div>
+                    <div class="history-item-mid">
+                        <span class="history-date">${dateLabel}</span>
+                        ${timeLabel ? `<span class="history-time">${timeLabel}</span>` : ''}
+                    </div>
+                    <div class="history-item-bottom">
+                        <span class="history-hours">${r.totalHours} 小時</span>
+                    </div>
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        function formatDateLabel(iso) {
+            const d = new Date(iso);
+            return `${d.getMonth() + 1}/${d.getDate()}`;
+        }
+        function formatTimeLabel(iso) {
+            const d = new Date(iso);
+            return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+        }
+
+        async function loadHistory() {
+            const list = document.getElementById('historyList');
+            list.innerHTML = '<div class="history-empty">載入中...</div>';
+            try {
+                const records = await LiffUtils.getMyLeaveRequests();
+                renderHistory(records);
+            } catch (err) {
+                console.error(err);
+                list.innerHTML = '<div class="history-empty">讀取失敗，請稍後再試</div>';
+            }
+        }
+        document.getElementById('btnRefreshHistory').addEventListener('click', loadHistory);
+
+        document.getElementById('leaveForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('btnSubmit');
+            const leaveType = document.getElementById('leaveType').value;
+            const startTime = getDateTimeValue('startDate', 'startTime');
+            const endTime = getDateTimeValue('endDate', 'endTime');
+            const note = document.getElementById('leaveNote').value.trim();
+
+            if (!leaveType || !startTime || !endTime) {
+                setStatus('請完整填寫假別與起訖時間', 'error');
+                return;
+            }
+
+            let totalHours = null;
+            if (!isSameDaySelection()) {
+                const manual = Number(document.getElementById('manualHours').value);
+                if (!manual || manual <= 0) {
+                    setStatus('跨日假單請填寫請假總時數', 'error');
+                    return;
+                }
+                totalHours = manual;
+            }
+
+            btn.disabled = true;
+            setStatus('送出申請中...', null);
+            try {
+                const result = await LiffUtils.submitLeaveRequest({
+                    leaveType, startTime, endTime, totalHours, note
+                });
+                if (result && result.success) {
+                    setStatus('請假申請已送出，等待審核', 'ok', true);
+                    document.getElementById('leaveForm').reset();
+                    document.getElementById('previewValue').textContent = '請先選擇假別與時間';
+                    refreshFormMode();
+                    await Promise.all([loadLeaveConfig(), loadHistory()]);
+                } else {
+                    setStatus((result && result.message) || '申請失敗，請確認條件後再試', 'error');
+                }
+            } catch (err) {
+                console.error(err);
+                setStatus('連線錯誤，請稍後再試', 'error');
+            } finally {
+                btn.disabled = false;
+            }
+        });
+
+        async function loadLeaveConfig() {
+            try {
+                leaveConfig = await LiffUtils.getLeaveFormConfig();
+                renderQuotaCards(leaveConfig.leaveTypes);
+                renderLeaveTypeOptions(leaveConfig.leaveTypes);
+                document.getElementById('btnSubmit').disabled = false;
+            } catch (err) {
+                console.error(err);
+                setStatus('讀取假別資料失敗，請稍後再試', 'error');
+            }
+        }
+
+        async function start() {
+            try {
+                const profile = await LiffUtils.init();
+                if (!profile) return; // 正在導轉去登入
+
+                const avatarBox = document.getElementById('avatarBox');
+                if (profile.pictureUrl) {
+                    avatarBox.innerHTML = `<img src="${profile.pictureUrl}" alt="頭像" />`;
+                } else {
+                    avatarBox.innerHTML = `<span class="placeholder">${profile.displayName.charAt(0)}</span>`;
+                }
+                document.querySelector('.card').classList.add('ready');
+                requestAnimationFrame(() => avatarBox.classList.add('loaded'));
+
+                setStatus('已連接 LINE，查詢綁定狀態中...', null);
+                const binding = await LiffUtils.checkBinding();
+
+                if (binding.blocked) {
+                    setStatus(binding.message, 'error');
+                    return;
+                }
+                if (!binding.bound) {
+                    setStatus('尚未綁定員工資料，即將前往綁定頁面...', null);
+                    setTimeout(() => { window.location.href = '../bind/index.html'; }, 800);
+                    return;
+                }
+
+                LiffUtils.empId = binding.empId;
+                document.getElementById('userName').textContent = binding.empName;
+                setStatus('', null);
+
+                await Promise.all([loadLeaveConfig(), loadHistory()]);
+            } catch (err) {
+                console.error(err);
+                setStatus('連接失敗，請確認 LIFF 或伺服器設定', 'error');
+                document.querySelector('.card').classList.add('ready');
+            }
+        }
+
+        start();
+    </script>
+
+</body>
+
+</html>

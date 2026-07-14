@@ -1,0 +1,341 @@
+/* ============================================
+   Y's Cloud 出勤系統 — 請假申請頁面樣式
+   承接 style.css 的色彩 token，視覺語彙比照
+   report.css：卡片 + 左側色條 + 圓角膠囊狀態徽章，
+   讓打卡／月報表／請假三個頁面感覺是同一套系統
+   ============================================ */
+
+.leave-card {
+    padding-bottom: 32px;
+}
+
+/* ---- 假別額度總覽：橫向捲動的卡片列 ---- */
+.quota-section {
+    width: 100%;
+    margin-top: 22px;
+}
+
+.quota-scroll {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    scrollbar-width: none;
+}
+
+.quota-scroll::-webkit-scrollbar {
+    display: none;
+}
+
+.quota-empty {
+    width: 100%;
+    text-align: center;
+    padding: 18px 12px;
+    color: var(--muted);
+    font-size: 12.5px;
+}
+
+.quota-card {
+    flex: 0 0 auto;
+    min-width: 128px;
+    padding: 14px 14px 12px;
+    background: var(--paper-raised);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    box-shadow: 0 1px 2px rgba(13, 27, 38, 0.03), 0 8px 20px -16px rgba(13, 27, 38, 0.35);
+    position: relative;
+    overflow: hidden;
+}
+
+.quota-card::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: var(--teal);
+}
+
+.quota-card.quota-low::before {
+    background: var(--amber);
+}
+
+.quota-type {
+    font-size: 11.5px;
+    color: var(--muted);
+    letter-spacing: 0.02em;
+}
+
+.quota-remaining {
+    margin-top: 5px;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 20px;
+    color: var(--navy-deep);
+    font-variant-numeric: tabular-nums;
+}
+
+.quota-remaining .quota-unit {
+    margin-left: 3px;
+    font-size: 10.5px;
+    font-weight: 500;
+    color: var(--muted);
+}
+
+.quota-bar {
+    margin-top: 9px;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--line);
+    overflow: hidden;
+}
+
+.quota-bar-fill {
+    height: 100%;
+    background: var(--teal);
+    border-radius: 2px;
+    transition: width 0.3s ease;
+}
+
+.quota-card.quota-low .quota-bar-fill {
+    background: var(--amber);
+}
+
+.quota-total {
+    margin-top: 7px;
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.01em;
+}
+
+/* ---- 表單 ---- */
+.leave-form {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-top: 22px;
+}
+
+.lf-row {
+    display: flex;
+    gap: 10px;
+}
+
+.lf-row .lf-field {
+    flex: 1;
+    min-width: 0;
+}
+
+.lf-field label {
+    display: block;
+    font-size: 12.5px;
+    color: var(--muted);
+    margin-bottom: 7px;
+    letter-spacing: 0.02em;
+}
+
+.lf-field select,
+.lf-field input[type="date"],
+.lf-field input[type="number"],
+.lf-field textarea {
+    width: 100%;
+    padding: 12px 14px;
+    border-radius: 10px;
+    border: 1.5px solid var(--line);
+    font-family: var(--font-body);
+    font-size: 14.5px;
+    color: var(--ink);
+    background: var(--paper-raised);
+    transition: border-color 0.15s ease;
+}
+
+.lf-field select:focus,
+.lf-field input:focus,
+.lf-field textarea:focus {
+    outline: none;
+    border-color: var(--teal);
+}
+
+.lf-field textarea {
+    resize: vertical;
+    min-height: 44px;
+    font-family: var(--font-body);
+}
+
+.lf-hint {
+    margin-top: 6px;
+    font-size: 11.5px;
+    color: var(--teal-deep);
+    letter-spacing: 0.01em;
+    min-height: 14px;
+}
+
+/* ---- 請假時數試算（唯讀展示，質感比照 today-item） ---- */
+.lf-preview {
+    background: var(--teal-soft);
+    border: 1.5px dashed var(--teal);
+    border-radius: 10px;
+    padding: 12px 14px;
+}
+
+.lf-preview label {
+    color: var(--teal-deep);
+    margin-bottom: 4px;
+}
+
+.lf-preview-value {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 18px;
+    color: var(--teal-deep);
+    font-variant-numeric: tabular-nums;
+}
+
+.lf-preview-value.lf-preview-error {
+    font-family: var(--font-body);
+    font-weight: 500;
+    font-size: 13px;
+    color: #A23B3B;
+}
+
+.lf-manual-hours .lf-hint {
+    color: var(--muted);
+}
+
+/* ---- 過去申請紀錄 ---- */
+.history-section {
+    width: 100%;
+}
+
+.history-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.history-title {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 14.5px;
+    color: var(--navy-deep);
+    letter-spacing: 0.01em;
+}
+
+.history-refresh {
+    background: transparent;
+    border: none;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    color: var(--muted);
+    font-size: 15px;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
+}
+
+.history-refresh:hover {
+    background: var(--teal-soft);
+    color: var(--teal-deep);
+}
+
+.history-refresh:active {
+    transform: rotate(120deg);
+}
+
+.history-list {
+    margin-top: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.history-empty {
+    text-align: center;
+    padding: 24px 12px;
+    color: var(--muted);
+    font-size: 12.5px;
+}
+
+.history-item {
+    padding: 12px 14px;
+    background: var(--paper-raised);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    position: relative;
+    overflow: hidden;
+}
+
+.history-item::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: var(--line);
+}
+
+.history-item:has(.history-status-pill.ok)::before {
+    background: var(--teal);
+}
+
+.history-item:has(.history-status-pill.warn)::before {
+    background: var(--amber);
+}
+
+.history-item-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.history-leave-type {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 13.5px;
+    color: var(--ink);
+}
+
+.history-status-pill {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    padding: 3px 9px;
+    border-radius: 20px;
+    background: var(--paper);
+    color: var(--muted);
+}
+
+.history-status-pill.ok {
+    background: var(--teal-soft);
+    color: var(--teal-deep);
+}
+
+.history-status-pill.warn {
+    background: var(--amber-soft);
+    color: var(--amber);
+}
+
+.history-status-pill.muted {
+    background: var(--paper);
+    color: var(--muted);
+}
+
+.history-item-mid {
+    margin-top: 6px;
+    display: flex;
+    gap: 10px;
+    font-size: 12px;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+}
+
+.history-item-bottom {
+    margin-top: 6px;
+    font-size: 12px;
+    color: var(--teal-deep);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
