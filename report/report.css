@@ -498,3 +498,46 @@
 .partial-banner.visible {
     display: block;
 }
+
+.dd-status-pill-extra {
+    margin-left: 6px;
+}
+
+.report-banners {
+    width: 100%;
+}
+
+.report-banner {
+    margin-top: 14px;
+    padding: 10px 14px;
+    background: var(--paper-raised);
+    border: 1px solid var(--line);
+    border-left: 3px solid #A23B3B;
+    border-radius: 10px;
+    color: var(--ink);
+    font-size: 12.5px;
+    line-height: 1.6;
+}
+
+.report-banner-sub {
+    margin-top: 4px;
+    font-size: 11px;
+    color: var(--muted);
+    font-weight: 400;
+}
+
+.report-banner-partial {
+    border-left-color: var(--amber);
+    color: var(--amber);
+}
+
+.report-banner-anomaly {
+    border-left-color: var(--muted);
+    color: var(--muted);
+}
+
+.dd-status-pill-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}

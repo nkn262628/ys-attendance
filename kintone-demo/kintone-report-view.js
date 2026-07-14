@@ -363,16 +363,19 @@
       </select>`
       : '';
 
-    const warningHtml = combinedWarnDays >= CONFIG.rules.lateWarningThreshold
-      ? `<div class="ys-warning-banner">本月遲到/早退已達 ${combinedWarnDays} 次，超過警戒值 ${CONFIG.rules.lateWarningThreshold} 次</div>`
-      : '';
+    // warning跟partial合併成一則，主句講次數，partial>0時加一句附註說明子集關係
+    let warningHtml = '';
+    if (combinedWarnDays >= CONFIG.rules.lateWarningThreshold) {
+      const partialLine = partialDays > 0
+        ? `<div class="ys-warning-sub">其中 ${partialDays} 天已有假單，但未完全涵蓋，請確認是否需要調整假單或補登打卡</div>`
+        : '';
+      warningHtml = `<div class="ys-warning-banner">本月出勤異常（遲到/早退/下班未打卡）已達 ${combinedWarnDays} 次，超過警戒值 ${CONFIG.rules.lateWarningThreshold} 次${partialLine}</div>`;
+    } else if (partialDays > 0) {
+      warningHtml = `<div class="ys-warning-banner ys-warning-partial">有 ${partialDays} 天已核准假單但未完全涵蓋當日出勤異常，請確認是否需要調整假單或補登打卡</div>`;
+    }
 
     const anomalyHtml = anomalyDates.length > 0
       ? `<div class="ys-warning-banner ys-warning-anomaly">有 ${anomalyDates.length} 天平日尚無打卡紀錄，請人工確認是否為漏打卡</div>`
-      : '';
-
-    const partialHtml = partialDays > 0
-      ? `<div class="ys-warning-banner ys-warning-partial">有 ${partialDays} 天已核准假單但未完全涵蓋當日異常（例如下班未打卡），請確認是否需要調整假單或補登打卡</div>`
       : '';
 
     body.innerHTML = `
@@ -386,7 +389,6 @@
       </div>
       ${warningHtml}
       ${anomalyHtml}
-      ${partialHtml}
       <div class="ys-overview">
         <svg class="ys-ring" viewBox="0 0 80 80">
           <circle cx="40" cy="40" r="33" style="stroke:var(--ys-line)" stroke-width="6" fill="none"/>
@@ -582,26 +584,41 @@
       return;
     }
 
+    // 改成
     const fmt = (iso) => iso ? new Date(iso).toLocaleTimeString('zh-TW', { hour12: false, hour: '2-digit', minute: '2-digit' }) : '--:--';
     const warn = display.warn;
-    panel.classList.add(display.hasLeave ? 'accent-leave' : (warn ? 'accent-warn' : 'accent-ok'));
+    // accent色改成warn優先：只要還算異常就用amber邊條，即使有假單也一樣（因為partial仍是異常）
+    panel.classList.add(warn ? 'accent-warn' : (display.hasLeave ? 'accent-leave' : 'accent-ok'));
 
-    const notes = [];
+    const hasProblem = display.lateIsProblem || display.earlyIsProblem;
+    const problemLabel = buildProblemLabel(display, rec);
+    // 只有「有假單 + 下班未打卡」這個組合才拆成兩個狀態，其他情況維持單一狀態
+    const showDualBadge = display.hasLeave && display.earlyIsMissingCheckout;
+
+    // 單一狀態時的文字/樣式：warn優先顯示問題文字，不然才顯示假別，都沒有就顯示原始出勤狀態
+    const singleLabel = hasProblem ? problemLabel : (display.hasLeave ? display.label : (rec.status || '正常'));
+    const singleClass = warn ? 'warn' : (display.hasLeave ? 'leave' : '');
+
+    // 下方細節備註：只在「有假單」時才需要額外說明，其餘情況上方狀態已經講清楚，不重複
+    let noteText = '';
     let noteIsLeaveStyle = false;
-    if (display.hasLeave) {
-      notes.push(display.warn ? `已核准「${display.label}」` : `已核准「${display.label}」，不列入異常`);
-      noteIsLeaveStyle = !display.warn; // 完全涵蓋才用teal的leave樣式，partial維持amber警示色
+    if (display.hasLeave && !warn) {
+      noteText = `已核准「${display.label}」，不列入異常`;
+      noteIsLeaveStyle = true;
+    } else if (display.hasLeave && warn) {
+      noteText = `已核准「${display.label}」，但當天仍有 ${problemLabel}，請確認是否需要調整`;
     }
-    if (display.lateIsProblem) notes.push(`遲到 ${formatMinutes(rec.lateMinutes)}`);
-    if (display.earlyIsProblem) notes.push(display.earlyIsMissingCheckout ? '下班未打卡' : `早退 ${formatMinutes(rec.earlyMinutes)}`);
 
-    // ↓↓↓ 這裡開始是新的：原本只有下面桌面版那一種 innerHTML，
-    // 現在多加一個 if 分岔，手機版走新的三欄樣式
     if (isMobileMode) {
       panel.innerHTML = `
     <div class="ys-dd-header">
       <span class="ys-dd-date">${dateStr}</span>
-      <span class="ys-dd-status-pill ${warn ? 'warn' : (display.hasLeave ? 'leave' : '')}">${display.hasLeave ? display.label : (rec.status || '正常')}</span>
+      ${showDualBadge ? `
+        <span class="ys-dd-status-pill-group">
+          <span class="ys-dd-status-pill leave">${display.label}</span>
+          <span class="ys-dd-status-pill warn">下班未打卡</span>
+        </span>
+      ` : `<span class="ys-dd-status-pill ${singleClass}">${singleLabel}</span>`}
     </div>
     <div class="ys-dd-times">
       <div class="ys-dd-item">
@@ -617,14 +634,18 @@
         <div class="ys-dd-value">${Math.floor(rec.workMinutes / 60)}h${rec.workMinutes % 60}m</div>
       </div>
     </div>
-    ${notes.length ? `<div class="${noteIsLeaveStyle ? 'ys-dd-note-leave' : 'ys-dd-note-warn'}">${notes.join('・')}</div>` : ''}
+    ${noteText ? `<div class="${noteIsLeaveStyle ? 'ys-dd-note-leave' : 'ys-dd-note-warn'}">${noteText}</div>` : ''}
   `;
     } else {
-      // 桌面版：跟你原本一模一樣，一個字都沒改
       panel.innerHTML = `
     <div class="ys-dd-header">
       <span class="ys-dd-date">${dateStr}</span>
-      <span class="ys-dd-status"><span class="dot ${warn ? 'warn' : (display.hasLeave ? 'leave' : '')}"></span>${display.hasLeave ? display.label : (rec.status || '正常')}</span>
+      ${showDualBadge ? `
+        <span class="ys-dd-status-group">
+          <span class="ys-dd-status leave"><span class="dot leave"></span>${display.label}</span>
+          <span class="ys-dd-status warn"><span class="dot warn"></span>下班未打卡</span>
+        </span>
+      ` : `<span class="ys-dd-status"><span class="dot ${singleClass}"></span>${singleLabel}</span>`}
     </div>
     <div class="ys-timeline">
       <div class="ys-timeline-node">
@@ -645,7 +666,7 @@
     </div>
     <div class="ys-dd-summary">
       <span>工時 <b>${Math.floor(rec.workMinutes / 60)}</b>時<b>${rec.workMinutes % 60}</b>分</span>
-       ${notes.length ? `<span class="${noteIsLeaveStyle ? 'leave-text' : 'warn-text'}">${notes.join('・')}</span>` : ''}
+      ${noteText ? `<span class="${noteIsLeaveStyle ? 'leave-text' : 'warn-text'}">${noteText}</span>` : ''}
     </div>
   `;
     }
@@ -700,6 +721,13 @@
     const h = Math.floor(mins / 60);
     const m = mins % 60;
     return h > 0 ? `${h}小時${m}分` : `${m}分`;
+  }
+
+  function buildProblemLabel(display, rec) {
+    const parts = [];
+    if (display.lateIsProblem) parts.push(`遲到 ${formatMinutes(rec.lateMinutes)}`);
+    if (display.earlyIsProblem) parts.push(display.earlyIsMissingCheckout ? '下班未打卡' : `早退 ${formatMinutes(rec.earlyMinutes)}`);
+    return parts.join('・');
   }
 
   function countWeekdaysUpTo(year, month, lastDay) {

@@ -237,6 +237,13 @@
     color: var(--ys-amber);
 }
 
+.ys-warning-sub {
+    margin-top: 4px;
+    font-size: 12px;
+    color: var(--ys-muted);
+    font-weight: 400;
+}
+
 /* ---- 總覽卡片 ---- */
 .ys-overview {
     display: flex;
@@ -490,6 +497,18 @@
 
 .ys-dd-status .dot.none {
     background: var(--ys-muted);
+}
+
+.ys-dd-status-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.ys-dd-status-pill-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
 }
 
 .ys-timeline {

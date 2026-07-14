@@ -69,7 +69,9 @@
                     </div>
                 </div>
             </div>
-            <div class="partial-banner" id="partialBanner"></div>
+
+            <div class="report-banners" id="reportBanners"></div>
+
             <!-- 小日曆 -->
             <div class="calendar-section" id="calendarSection">
                 <div class="calendar-weekdays">
@@ -149,6 +151,13 @@
 
         function isWarnStatus(day) {
             return !!(day && day.warn);
+        }
+
+        function buildProblemText(rec) {
+            const parts = [];
+            if (rec.lateIsProblem) parts.push(`遲到${rec.lateMinutes ? ' ' + formatMinutesAsHM(rec.lateMinutes) : ''}`);
+            if (rec.earlyIsProblem) parts.push(rec.earlyIsMissingCheckout ? '下班未打卡' : `早退${rec.earlyMinutes ? ' ' + formatMinutesAsHM(rec.earlyMinutes) : ''}`);
+            return parts.join('・');
         }
 
         function renderMonthLabel() {
@@ -241,8 +250,32 @@
 
             if (ddTimes) ddTimes.style.display = '';
             const warn = isWarnStatus(rec);
-            pill.textContent = rec.hasLeave ? rec.leaveLabel : (rec.status || '正常');
-            pill.className = 'dd-status-pill' + (warn ? ' warn' : (rec.hasLeave ? ' leave' : ''));
+            const hasProblem = rec.lateIsProblem || rec.earlyIsProblem;
+            const problemText = buildProblemText(rec);
+            const showDualBadge = rec.hasLeave && rec.earlyIsMissingCheckout;
+
+            const singleLabel = hasProblem ? problemText : (rec.hasLeave ? rec.leaveLabel : (rec.status || '正常'));
+            const singleClass = warn ? ' warn' : (rec.hasLeave ? ' leave' : '');
+
+            const header = pill.parentElement;
+            const existingGroup = header.querySelector('.dd-status-pill-group');
+            if (existingGroup) existingGroup.remove();
+
+            if (showDualBadge) {
+                pill.style.display = 'none'; // 保留#ddStatusPill節點本身（其他地方可能會查詢它），但畫面上用group取代
+                const group = document.createElement('span');
+                group.className = 'dd-status-pill-group';
+                group.innerHTML = `
+        <span class="dd-status-pill leave">${rec.leaveLabel}</span>
+        <span class="dd-status-pill warn">下班未打卡</span>
+    `;
+                pill.after(group);
+            } else {
+                pill.style.display = '';
+                pill.textContent = singleLabel;
+                pill.className = 'dd-status-pill' + singleClass;
+            }
+
             dayDetail.classList.toggle('has-warn', warn);
             dayDetail.classList.toggle('has-leave', rec.hasLeave && !warn);
 
@@ -250,24 +283,13 @@
             document.getElementById('ddCheckOut').textContent = formatHM(rec.checkOut) || '--:--';
             document.getElementById('ddWorkHours').textContent = rec.workMinutes ? formatMinutesAsHM(rec.workMinutes) : '--';
 
-            function buildProblemText(rec) {
-                const parts = [];
-                if (rec.lateIsProblem) parts.push(`遲到${rec.lateMinutes ? ' ' + formatMinutesAsHM(rec.lateMinutes) : ''}`);
-                if (rec.earlyIsProblem) parts.push(rec.earlyIsMissingCheckout ? '下班未打卡' : `早退${rec.earlyMinutes ? ' ' + formatMinutesAsHM(rec.earlyMinutes) : ''}`);
-                return parts.join('・');
-            }
-
-            let noteText, noteClass = 'dd-note';
+            let noteText = '', noteClass = 'dd-note';
             if (rec.hasLeave && !warn) {
                 noteText = `已核准「${rec.leaveLabel}」，不列入異常`;
                 noteClass += ' dd-note-leave';
             } else if (rec.hasLeave && warn) {
-                const problemText = buildProblemText(rec);
-                noteText = `已核准「${rec.leaveLabel}」${problemText ? '，惟仍有 ' + problemText : ''}`;
+                noteText = `已核准「${rec.leaveLabel}」，但當天仍有 ${problemText}，請確認是否需要調整`;
                 noteClass += ' dd-note-alert';
-            } else {
-                noteText = buildProblemText(rec) || LiffUtils.formatAttendanceNote(rec.lateMinutes, rec.earlyMinutes) || '';
-                noteClass += warn ? ' dd-note-alert' : '';
             }
             ddNote.textContent = noteText;
             ddNote.className = noteClass;
@@ -348,6 +370,8 @@
             return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
         }
 
+        const LATE_WARNING_THRESHOLD = 3; // 跟 kintone-report-view.js 的 CONFIG.rules.lateWarningThreshold 保持一致
+
         function renderReport(data) {
             hideDayDetail();
             const s = data.summary;
@@ -355,16 +379,24 @@
             document.getElementById('sumLateEarly').textContent = `${s.lateDays} / ${s.earlyDays}`;
             document.getElementById('sumWorkTotal').textContent = formatMinutesAsHM(s.totalWorkMinutes);
 
-            const partialBanner = document.getElementById('partialBanner');
-            const partialCount = (data.days || []).filter(d => d.partial).length;
-            if (partialBanner) {
-                if (partialCount > 0) {
-                    partialBanner.textContent = `有 ${partialCount} 天已核准假單但未完全涵蓋當日異常（例如下班未打卡），請確認是否需要調整假單或補登打卡`;
-                    partialBanner.classList.add('visible');
-                } else {
-                    partialBanner.classList.remove('visible');
-                }
+            const combinedWarnDays = (data.days || []).filter(d => d.lateIsProblem || d.earlyIsProblem).length;
+            const partialDays = (data.days || []).filter(d => d.partial).length;
+            const anomalyCount = (data.anomalyDates || []).length;
+
+            let bannerHtml = '';
+            if (combinedWarnDays >= LATE_WARNING_THRESHOLD) {
+                const partialLine = partialDays > 0
+                    ? `<div class="report-banner-sub">其中 ${partialDays} 天已有假單，但未完全涵蓋，請確認是否需要調整假單或補登打卡</div>`
+                    : '';
+                bannerHtml += `<div class="report-banner">本月出勤異常（遲到/早退/下班未打卡）已達 ${combinedWarnDays} 次，超過警戒值 ${LATE_WARNING_THRESHOLD} 次${partialLine}</div>`;
+            } else if (partialDays > 0) {
+                bannerHtml += `<div class="report-banner report-banner-partial">有 ${partialDays} 天已核准假單但未完全涵蓋當日出勤異常，請確認是否需要調整假單或補登打卡</div>`;
             }
+            if (anomalyCount > 0) {
+                bannerHtml += `<div class="report-banner report-banner-anomaly">有 ${anomalyCount} 天平日尚無打卡紀錄，請人工確認是否為漏打卡</div>`;
+            }
+            const bannerEl = document.getElementById('reportBanners');
+            if (bannerEl) bannerEl.innerHTML = bannerHtml;
 
             const isCurrentMonth = (viewYear === today.getFullYear() && viewMonth === today.getMonth() + 1);
             const lastConsideredDay = isCurrentMonth ? today.getDate() : new Date(viewYear, viewMonth, 0).getDate();
