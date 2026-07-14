@@ -568,6 +568,18 @@
     color: var(--ys-teal-deep);
 }
 
+.ys-dd-note-muted {
+    margin-top: 10px;
+    font-size: 13px;
+    color: var(--ys-muted);
+}
+
+.ys-dd-note-alert {
+    margin-top: 10px;
+    font-size: 13px;
+    color: var(--ys-amber);
+}
+
 .ys-dd-placeholder {
     padding: 20px 0;
     text-align: center;
@@ -652,6 +664,11 @@
     color: var(--ys-amber);
 }
 
+#ys-report-root[data-mobile="true"] .ys-dd-status-pill.none {
+    background: var(--ys-paper);
+    color: var(--ys-muted);
+}
+
 #ys-report-root[data-mobile="true"] .ys-dd-times {
     display: flex;
     gap: 16px;
@@ -719,4 +736,23 @@
 
 .ys-calendar-legend .dot.none {
     background: var(--ys-line);
+}
+
+/* ---- 請假覆蓋樣式：跟 warn(amber) 區隔，用 teal 表示「已核准、非異常」---- */
+.ys-day.leave {
+    border-style: dotted;
+    border-color: var(--ys-teal);
+}
+
+.status-dot.leave {
+    background: var(--ys-teal);
+}
+
+.ys-day-detail.accent-leave {
+    border-left-color: var(--ys-teal);
+}
+
+.ys-dd-status-pill.leave {
+    background: var(--ys-teal-soft);
+    color: var(--ys-teal-deep);
 }

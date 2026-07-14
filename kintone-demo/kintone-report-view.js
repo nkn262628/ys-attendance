@@ -42,7 +42,21 @@
       appId: 2334,
       empId: '員工編號',
       empName: '員工姓名',
-      kintoneUser: '員工系統帳號', // 存 Kintone 登入帳號的欄位
+      kintoneUser: '員工系統帳號',
+      stdStart: '標準上班時間',
+      stdEnd: '標準下班時間',
+    },
+
+    // 請假 App，用來比對月報表哪些天已核准請假
+    leaveApp: {
+      appId: 2337,
+      empId: '員工編號',
+      leaveType: '請假假別',
+      startTime: '請假起始時間',
+      endTime: '請假結束時間',
+      totalHours: '請假總時數',
+      status: '狀態',
+      statusApproved: '簽核完成',
     },
 
     // 出勤狀態的「值」，跟 GAS 後端 VALUES 保持一致
@@ -55,6 +69,7 @@
     // 本月遲到/早退超過幾次要跳警告
     rules: {
       lateWarningThreshold: 3,
+      workHoursPerDay: 8, // 判斷「整天假」是否涵蓋全天用
     },
   };
 
@@ -119,8 +134,11 @@
   let viewMonth = today.getMonth() + 1;
   let empId = null;
   let empName = null;
+  let empStdStart = null; // 目前選取員工的標準上班時間 "HH:mm"
+  let empStdEnd = null;   // 目前選取員工的標準下班時間 "HH:mm"
   let masterList = [];
   let isMobileMode = false;
+  let leaveByDateMap = {};
 
   async function initReport(isMobile) {
     isMobileMode = isMobile;
@@ -140,6 +158,8 @@
       const defaultPick = self || masterList[0];
       empId = defaultPick.empId;
       empName = defaultPick.empName;
+      empStdStart = defaultPick.stdStart;
+      empStdEnd = defaultPick.stdEnd;
 
       await renderMonth();
 
@@ -156,13 +176,121 @@
     const M = CONFIG.master;
     return kintone.api(kintone.api.url('/k/v1/records', true), 'GET', {
       app: M.appId,
-      fields: [M.empId, M.empName, M.kintoneUser],
+      fields: [M.empId, M.empName, M.kintoneUser, M.stdStart, M.stdEnd],
     }).then(res => res.records.map(r => ({
       empId: r[M.empId].value,
       empName: r[M.empName].value,
-      // 員工系統帳號是使用者選擇欄位，value 是陣列，取出所有 code 方便比對
       kintoneCodes: (r[M.kintoneUser].value || []).map(u => u.code),
+      stdStart: r[M.stdStart] ? r[M.stdStart].value : null, // "HH:mm"
+      stdEnd: r[M.stdEnd] ? r[M.stdEnd].value : null,
     })));
+  }
+
+  // ------------------------------------------------
+  // 查詢這個員工、這個月範圍內、已核准的請假紀錄
+  // ------------------------------------------------
+  function fetchApprovedLeaves(empId, startDate, endDate) {
+    const L = CONFIG.leaveApp;
+    const query = `${L.empId} = "${empId}" and ${L.status} in ("${L.statusApproved}") and ${L.startTime} <= "${endDate}T23:59:59Z" and ${L.endTime} >= "${startDate}T00:00:00Z"`;
+
+    return kintone.api(kintone.api.url('/k/v1/records', true), 'GET', {
+      app: L.appId,
+      query: query,
+      fields: [L.empId, L.leaveType, L.startTime, L.endTime, L.totalHours, L.status],
+    }).then(res => res.records.map(r => ({
+      leaveType: r[L.leaveType].value,
+      start: new Date(r[L.startTime].value),
+      end: new Date(r[L.endTime].value),
+      totalHours: Number(r[L.totalHours].value) || 0,
+    })));
+  }
+
+  // ------------------------------------------------
+  // 把假單清單，攤開成「每一天請了多少小時、哪個假別」的對照表
+  // ------------------------------------------------
+  function buildLeaveByDateMap(leaves) {
+    const map = {};
+    const pad = n => String(n).padStart(2, '0');
+    const dateKey = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+
+    function addToMap(key, leaveType, hours, interval) {
+      if (!map[key]) map[key] = { hours: 0, types: [], intervals: [] };
+      map[key].hours += hours;
+      if (!map[key].types.includes(leaveType)) map[key].types.push(leaveType);
+      if (interval) map[key].intervals.push(interval); // 只有同日假單才有精確起訖，供缺口比對用
+    }
+
+    leaves.forEach(lv => {
+      const startKey = dateKey(lv.start);
+      const endKey = dateKey(lv.end);
+
+      if (startKey === endKey) {
+        // 單日假單(含半天)：時數就是totalHours，並保留起訖時間供精確比對缺口
+        addToMap(startKey, lv.leaveType, lv.totalHours, { start: lv.start, end: lv.end });
+        return;
+      }
+
+      // 跨日假單：簡化假設每天都是整天8小時(見上方已跟你確認過的簡化假設)
+      let cursor = new Date(lv.start.getFullYear(), lv.start.getMonth(), lv.start.getDate());
+      const endDateOnly = new Date(lv.end.getFullYear(), lv.end.getMonth(), lv.end.getDate());
+      while (cursor <= endDateOnly) {
+        addToMap(dateKey(cursor), lv.leaveType, CONFIG.rules.workHoursPerDay);
+        cursor.setDate(cursor.getDate() + 1);
+      }
+    });
+
+    return map;
+  }
+
+  // ------------------------------------------------
+  // 統一判斷：這一天最終應該顯示什麼狀態
+  // ------------------------------------------------
+  function resolveDisplayStatus(dateStr, rec) {
+    const leaveInfo = leaveByDateMap[dateStr];
+
+    if (!rec) {
+      // 沒有打卡紀錄：規則不變，只有「整天」已核准假單才不算異常
+      if (leaveInfo && leaveInfo.hours >= CONFIG.rules.workHoursPerDay) {
+        return { hasLeave: true, label: leaveInfo.types.join('/'), warn: false };
+      }
+      return { hasLeave: false, label: null, warn: false };
+    }
+
+    if (!isWarn(rec.status)) {
+      return { hasLeave: false, label: rec.status || '正常', warn: false };
+    }
+
+    // 沒有標準上下班時間可比對時，退回舊版寬鬆規則(當天有任何假單就蓋掉)
+    if (!empStdStart || !empStdEnd) {
+      if (leaveInfo) {
+        return { hasLeave: true, label: leaveInfo.types.join('/'), warn: false };
+      }
+      return { hasLeave: false, label: rec.status, warn: true };
+    }
+
+    // 精確比對：假單起訖時間是否完整涵蓋造成遲到/早退的那段缺口
+    const gaps = computeAnomalyGaps(dateStr, rec, empStdStart, empStdEnd);
+    const intervals = (leaveInfo && leaveInfo.intervals) || [];
+
+    const lateCovered = intervalCoversGap(intervals, gaps.late);
+    const earlyCovered = intervalCoversGap(intervals, gaps.early);
+
+    if (lateCovered && earlyCovered) {
+      return { hasLeave: true, label: leaveInfo ? leaveInfo.types.join('/') : rec.status, warn: false };
+    }
+
+    // 只涵蓋一部分(例如遲到早退中，只有早上那段有請假)：
+    // 剩下沒被涵蓋的那段仍視為異常，但標記 partial 讓畫面知道「已有假單、但沒蓋滿」
+    const remainingLabel = (!lateCovered && !earlyCovered)
+      ? rec.status
+      : (!lateCovered ? CONFIG.values.attendanceLate : CONFIG.values.attendanceEarly);
+
+    return {
+      hasLeave: !!leaveInfo,
+      label: remainingLabel,
+      warn: true,
+      partial: !!leaveInfo,
+    };
   }
 
   async function renderMonth() {
@@ -190,10 +318,13 @@
     const byDate = {};
     days.forEach(d => { byDate[d.date] = d; });
 
+    const leaves = await fetchApprovedLeaves(empId, startDate, endDate);
+    leaveByDateMap = buildLeaveByDateMap(leaves); // 模組層級變數，下方要新增宣告
+
     const body = document.getElementById('ysReportBody');
     const isCurrentMonth = (viewYear === today.getFullYear() && viewMonth === today.getMonth() + 1);
     const attendanceDays = days.length;
-    const lateDays = days.filter(d => isWarn(d.status)).length;
+    const lateDays = days.filter(d => resolveDisplayStatus(d.date, d).warn).length;
     const totalWorkMinutes = days.reduce((s, d) => s + d.workMinutes, 0);
     const lastConsideredDay = isCurrentMonth ? today.getDate() : lastDay;
     const weekdayCount = countWeekdaysUpTo(viewYear, viewMonth, lastConsideredDay);
@@ -207,7 +338,10 @@
       const wd = new Date(viewYear, viewMonth - 1, d).getDay();
       if (wd === 0 || wd === 6) continue;
       const dateStr = `${viewYear}-${mm}-${String(d).padStart(2, '0')}`;
-      if (!byDate[dateStr]) anomalyDates.push(dateStr);
+      if (byDate[dateStr]) continue;
+      const leaveInfo = leaveByDateMap[dateStr];
+      if (leaveInfo && leaveInfo.hours >= CONFIG.rules.workHoursPerDay) continue; // 整天已核准請假，不算異常
+      anomalyDates.push(dateStr);
     }
 
     const empSelectHtml = masterList.length > 1
@@ -292,6 +426,8 @@
         if (!picked) return;
         empId = picked.empId;
         empName = picked.empName;
+        empStdStart = picked.stdStart;
+        empStdEnd = picked.stdEnd;
         renderMonth();
       });
     }
@@ -340,61 +476,109 @@
       const dateStr = `${viewYear}-${String(viewMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
       const weekday = new Date(viewYear, viewMonth - 1, day).getDay();
       const rec = byDate[dateStr];
+      const display = resolveDisplayStatus(dateStr, rec);
       const cell = document.createElement('div');
       cell.className = 'ys-day clickable';
       if (weekday === 0 || weekday === 6) cell.classList.add('weekend');
       if (dateStr === todayStr) cell.classList.add('is-today');
-      if (!rec) cell.classList.add('empty');
-      if (anomalySet.has(dateStr)) cell.classList.add('anomaly');
+      if (!rec && !display.hasLeave) cell.classList.add('empty');
+      if (display.hasLeave) cell.classList.add('leave');
+      if (!rec && !display.hasLeave && anomalySet.has(dateStr)) cell.classList.add('anomaly');
 
       const inTime = rec && rec.checkIn ? new Date(rec.checkIn).toLocaleTimeString('zh-TW', { hour12: false, hour: '2-digit', minute: '2-digit' }) : '';
 
       cell.innerHTML = `
         <span>${day}</span>
-        ${rec ? `<span class="status-dot ${isWarn(rec.status) ? 'warn' : ''}"></span>` : ''}
-        ${rec ? `<span class="mini-time">${inTime}</span>` : ''}
-`;
-      cell.addEventListener('click', () => showDayDetail(dateStr, rec, weekday === 0 || weekday === 6));
+        ${rec ? `<span class="status-dot ${display.warn ? 'warn' : ''} ${display.hasLeave ? 'leave' : ''}"></span>` : (display.hasLeave ? `<span class="status-dot leave"></span>` : '')}
+        ${rec ? `<span class="mini-time">${inTime}</span>` : (display.hasLeave ? `<span class="mini-time">${display.label}</span>` : '')}
+      `;
+      cell.addEventListener('click', () => showDayDetail(dateStr, rec, weekday === 0 || weekday === 6, anomalySet.has(dateStr)));
       grid.appendChild(cell);
     }
   }
 
-  function showDayDetail(dateStr, rec, isWeekend) {
+  function showDayDetail(dateStr, rec, isWeekend, isAnomaly) {
     const panel = document.getElementById('ysDayDetail');
     if (!panel) return;
 
-    panel.classList.remove('accent-ok', 'accent-warn', 'accent-none');
+    panel.classList.remove('accent-ok', 'accent-warn', 'accent-none', 'accent-leave');
+    const display = resolveDisplayStatus(dateStr, rec);
 
-    // ↓↓↓ 這一整段跟你原本一模一樣，完全沒改
     if (!rec) {
-      panel.classList.add('accent-none');
-      panel.innerHTML = isWeekend
-        ? `
-      <div class="ys-dd-header">
-        <span class="ys-dd-date">${dateStr}</span>
-        <span class="ys-dd-status"><span class="dot none"></span>例假日</span>
-      </div>
-      <div class="ys-dd-note">這天是週末，非上班日。</div>
-    `
-        : `
-      <div class="ys-dd-header">
-        <span class="ys-dd-date">${dateStr}</span>
-        <span class="ys-dd-status"><span class="dot none"></span>未打卡</span>
-      </div>
-      <div class="ys-dd-note">這天沒有打卡紀錄，可能是漏打卡或已請假但未同步在此系統。</div>
-    `;
+      if (display.hasLeave) {
+        panel.classList.add('accent-leave');
+        panel.innerHTML = `
+        <div class="ys-dd-header">
+          <span class="ys-dd-date">${dateStr}</span>
+          <span class="ys-dd-status"><span class="dot leave"></span>${display.label}</span>
+        </div>
+        <div class="ys-dd-note">這天已核准「${display.label}」，不列入出勤異常。</div>
+      `;
+        panel.classList.add('visible');
+        return;
+      }
+      const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+      const isFuture = dateStr > todayStr;
+      const isToday = dateStr === todayStr;
+
+      let statusKey, statusLabel, noteText;
+      if (isWeekend) {
+        statusKey = 'none';
+        statusLabel = '例假日';
+        noteText = '非工作日，不列入出勤統計。';
+      } else if (isFuture) {
+        statusKey = 'none';
+        statusLabel = '尚未發生';
+        noteText = '這天還沒到，尚無出勤資料。';
+      } else if (isToday) {
+        statusKey = 'none';
+        statusLabel = '尚未打卡';
+        noteText = '今天目前還沒有打卡紀錄。';
+      } else if (isAnomaly) {
+        statusKey = 'warn';
+        statusLabel = '未打卡異常';
+        noteText = '這天沒有任何打卡紀錄，請確認是否為漏打卡，必要時補登或申請假單。';
+      } else {
+        statusKey = 'none';
+        statusLabel = '未打卡';
+        noteText = '這天沒有打卡紀錄。';
+      }
+
+      panel.classList.add(statusKey === 'warn' ? 'accent-warn' : 'accent-none');
+      const noteClass = statusKey === 'warn' ? 'ys-dd-note-alert' : 'ys-dd-note-muted';
+
+      panel.innerHTML = isMobileMode ? `
+        <div class="ys-dd-header">
+          <span class="ys-dd-date">${dateStr}</span>
+          <span class="ys-dd-status-pill ${statusKey}">${statusLabel}</span>
+        </div>
+        <div class="${noteClass}">${noteText}</div>
+      ` : `
+        <div class="ys-dd-header">
+          <span class="ys-dd-date">${dateStr}</span>
+          <span class="ys-dd-status"><span class="dot ${statusKey}"></span>${statusLabel}</span>
+        </div>
+        <div class="${noteClass}">${noteText}</div>
+      `;
       panel.classList.add('visible');
       return;
     }
-    // ↑↑↑ 這一整段跟你原本一模一樣，完全沒改
 
     const fmt = (iso) => iso ? new Date(iso).toLocaleTimeString('zh-TW', { hour12: false, hour: '2-digit', minute: '2-digit' }) : '--:--';
-    const warn = isWarn(rec.status);
-    panel.classList.add(warn ? 'accent-warn' : 'accent-ok');
+    const warn = display.warn;
+    panel.classList.add(display.hasLeave ? 'accent-leave' : (warn ? 'accent-warn' : 'accent-ok'));
 
     const notes = [];
-    if (rec.lateMinutes > 0) notes.push(`遲到 ${formatMinutes(rec.lateMinutes)}`);
-    if (rec.earlyMinutes > 0) notes.push(`早退 ${formatMinutes(rec.earlyMinutes)}`);
+    if (display.hasLeave && !display.warn) {
+      notes.push(`已核准「${display.label}」，不列入異常`);
+    } else if (display.partial) {
+      notes.push(`當天已有核准假單，但未完全涵蓋${display.label}的時段`);
+      if (rec.lateMinutes > 0) notes.push(`遲到 ${formatMinutes(rec.lateMinutes)}`);
+      if (rec.earlyMinutes > 0) notes.push(`早退 ${formatMinutes(rec.earlyMinutes)}`);
+    } else {
+      if (rec.lateMinutes > 0) notes.push(`遲到 ${formatMinutes(rec.lateMinutes)}`);
+      if (rec.earlyMinutes > 0) notes.push(`早退 ${formatMinutes(rec.earlyMinutes)}`);
+    }
 
     // ↓↓↓ 這裡開始是新的：原本只有下面桌面版那一種 innerHTML，
     // 現在多加一個 if 分岔，手機版走新的三欄樣式
@@ -402,7 +586,7 @@
       panel.innerHTML = `
     <div class="ys-dd-header">
       <span class="ys-dd-date">${dateStr}</span>
-      <span class="ys-dd-status-pill ${warn ? 'warn' : ''}">${rec.status || '正常'}</span>
+      <span class="ys-dd-status-pill ${display.hasLeave ? 'leave' : (warn ? 'warn' : '')}">${display.hasLeave ? display.label : (rec.status || '正常')}</span>
     </div>
     <div class="ys-dd-times">
       <div class="ys-dd-item">
@@ -425,7 +609,7 @@
       panel.innerHTML = `
     <div class="ys-dd-header">
       <span class="ys-dd-date">${dateStr}</span>
-      <span class="ys-dd-status"><span class="dot ${warn ? 'warn' : ''}"></span>${rec.status || '正常'}</span>
+      <span class="ys-dd-status"><span class="dot ${display.hasLeave ? 'leave' : (warn ? 'warn' : '')}"></span>${display.hasLeave ? display.label : (rec.status || '正常')}</span>
     </div>
     <div class="ys-timeline">
       <div class="ys-timeline-node">
@@ -451,6 +635,40 @@
   `;
     }
     panel.classList.add('visible');
+  }
+
+  // 在 isWarn() 前面新增：
+  function parseStdTimeOnDate(dateStr, timeStr) {
+    if (!timeStr) return null;
+    const [y, m, d] = dateStr.split('-').map(Number);
+    const [hh = 0, mm = 0] = timeStr.split(':').map(Number);
+    return new Date(y, m - 1, d, hh, mm, 0);
+  }
+
+  // 算出「造成遲到/早退的那段實際缺口」
+  function computeAnomalyGaps(dateStr, rec, stdStartStr, stdEndStr) {
+    const gaps = { late: null, early: null };
+    if (!stdStartStr || !stdEndStr) return gaps; // 沒有標準時間可比對，交給呼叫端 fallback
+
+    const stdStart = parseStdTimeOnDate(dateStr, stdStartStr);
+    const stdEnd = parseStdTimeOnDate(dateStr, stdEndStr);
+
+    if ((rec.status === CONFIG.values.attendanceLate || rec.status === CONFIG.values.attendanceBoth) && rec.checkIn) {
+      const actualIn = new Date(rec.checkIn);
+      if (actualIn > stdStart) gaps.late = { start: stdStart, end: actualIn };
+    }
+    if ((rec.status === CONFIG.values.attendanceEarly || rec.status === CONFIG.values.attendanceBoth) && rec.checkOut) {
+      const actualOut = new Date(rec.checkOut);
+      if (actualOut < stdEnd) gaps.early = { start: actualOut, end: stdEnd };
+    }
+    return gaps;
+  }
+
+  // 假單區間是否「完整涵蓋」缺口(不只是重疊)
+  function intervalCoversGap(intervals, gap) {
+    if (!gap) return true; // 這天根本沒有這段缺口，視為不需要涵蓋
+    if (!intervals || intervals.length === 0) return false;
+    return intervals.some(iv => iv.start <= gap.start && iv.end >= gap.end);
   }
 
   function isWarn(status) {

@@ -147,8 +147,8 @@
             return iso ? new Date(iso).toLocaleTimeString('zh-TW', { hour12: false, hour: '2-digit', minute: '2-digit' }) : null;
         }
 
-        function isWarnStatus(status) {
-            return status === '遲到' || status === '早退' || status === '遲到早退';
+        function isWarnStatus(day) {
+            return !!(day && day.warn);
         }
 
         function renderMonthLabel() {
@@ -188,7 +188,8 @@
             document.querySelectorAll('.calendar-day.is-selected').forEach(el => el.classList.remove('is-selected'));
         }
 
-        function showDayDetail(dateStr, rec, cellEl) {
+        // 找到整支函式，改成：
+        function showDayDetail(dateStr, rec, cellEl, isWeekend, isAnomaly, leaveOnly) {
             document.querySelectorAll('.calendar-day.is-selected').forEach(el => el.classList.remove('is-selected'));
             cellEl.classList.add('is-selected');
             selectedDateStr = dateStr;
@@ -198,28 +199,86 @@
                 `${d.getMonth() + 1} 月 ${d.getDate()} 日（${'日一二三四五六'[d.getDay()]}）`;
 
             const pill = document.getElementById('ddStatusPill');
-            const warn = isWarnStatus(rec.status);
-            pill.textContent = rec.status || '正常';
-            pill.className = 'dd-status-pill' + (warn ? ' warn' : '');
+            const ddTimes = document.querySelector('.dd-times');
+            const ddNote = document.getElementById('ddNote');
+
+            if (!rec) {
+                if (ddTimes) ddTimes.style.display = 'none';
+                const todayStr = Utilities_formatDate(today);
+                const isFuture = dateStr > todayStr;
+                const isToday = dateStr === todayStr;
+
+                let statusKey, statusLabel, noteText;
+                if (leaveOnly) {
+                    statusKey = 'leave'; statusLabel = leaveOnly.label;
+                    noteText = `這天已核准「${leaveOnly.label}」，不列入出勤異常。`;
+                } else if (isWeekend) {
+                    statusKey = 'none'; statusLabel = '例假日';
+                    noteText = '非工作日，不列入出勤統計。';
+                } else if (isFuture) {
+                    statusKey = 'none'; statusLabel = '尚未發生';
+                    noteText = '這天還沒到，尚無出勤資料。';
+                } else if (isToday) {
+                    statusKey = 'none'; statusLabel = '尚未打卡';
+                    noteText = '今天目前還沒有打卡紀錄。';
+                } else if (isAnomaly) {
+                    statusKey = 'warn'; statusLabel = '未打卡異常';
+                    noteText = '這天沒有任何打卡紀錄，請確認是否為漏打卡，必要時補登或申請假單。';
+                } else {
+                    statusKey = 'none'; statusLabel = '未打卡';
+                    noteText = '這天沒有打卡紀錄。';
+                }
+
+                pill.textContent = statusLabel;
+                pill.className = 'dd-status-pill' + (statusKey === 'warn' ? ' warn' : (statusKey === 'leave' ? ' leave' : ''));
+                dayDetail.classList.toggle('has-warn', statusKey === 'warn');
+                dayDetail.classList.toggle('has-leave', statusKey === 'leave');
+                ddNote.textContent = noteText;
+                ddNote.className = 'dd-note' + (statusKey === 'warn' ? ' dd-note-alert' : (statusKey === 'leave' ? ' dd-note-leave' : ' dd-note-muted'));
+                dayDetail.classList.add('visible');
+                return;
+            }
+
+            if (ddTimes) ddTimes.style.display = '';
+            const warn = isWarnStatus(rec);
+            pill.textContent = rec.hasLeave ? rec.leaveLabel : (rec.status || '正常');
+            pill.className = 'dd-status-pill' + (rec.hasLeave ? ' leave' : (warn ? ' warn' : ''));
             dayDetail.classList.toggle('has-warn', warn);
+            dayDetail.classList.toggle('has-leave', rec.hasLeave && !warn);
 
             document.getElementById('ddCheckIn').textContent = formatHM(rec.checkIn) || '--:--';
             document.getElementById('ddCheckOut').textContent = formatHM(rec.checkOut) || '--:--';
             document.getElementById('ddWorkHours').textContent = rec.workMinutes ? formatMinutesAsHM(rec.workMinutes) : '--';
 
-            // 共用 LiffUtils.formatAttendanceNote，跟打卡頁今日提示同一套文案邏輯
-            document.getElementById('ddNote').textContent = LiffUtils.formatAttendanceNote(rec.lateMinutes, rec.earlyMinutes);
+            let noteText, noteClass = 'dd-note';
+            if (rec.hasLeave && !warn) {
+                noteText = `已核准「${rec.leaveLabel}」，不列入異常`;
+                noteClass += ' dd-note-leave';
+            } else if (rec.partial) {
+                const base = LiffUtils.formatAttendanceNote(rec.lateMinutes, rec.earlyMinutes) || '';
+                noteText = `當天已有核准假單，但未完全涵蓋${rec.leaveLabel || '異常'}的時段。${base}`;
+                noteClass += ' dd-note-alert';
+            } else {
+                noteText = LiffUtils.formatAttendanceNote(rec.lateMinutes, rec.earlyMinutes) || '';
+                noteClass += warn ? ' dd-note-alert' : '';
+            }
+            ddNote.textContent = noteText;
+            ddNote.className = noteClass;
 
             dayDetail.classList.add('visible');
         }
 
-        function renderCalendar(daysData) {
+        // 找到整支函式，改成：
+        function renderCalendar(daysData, leaveOnlyDays, anomalyDates) {
             const calendarGrid = document.getElementById('calendarGrid');
             if (!calendarGrid) return;
             const byDate = {};
             daysData.forEach(d => { byDate[d.date] = d; });
+            const leaveOnlyMap = {};
+            (leaveOnlyDays || []).forEach(l => { leaveOnlyMap[l.date] = l; });
+            const anomalySet = new Set(anomalyDates || []);
 
-            const firstWeekday = new Date(viewYear, viewMonth - 1, 1).getDay(); // 0=日
+            const firstWeekday = new Date(viewYear, viewMonth - 1, 1).getDay();
             const totalDays = new Date(viewYear, viewMonth, 0).getDate();
             const todayStr = Utilities_formatDate(today);
 
@@ -236,27 +295,41 @@
                 const dateStr = `${viewYear}-${String(viewMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
                 const weekday = new Date(viewYear, viewMonth - 1, day).getDay();
                 const rec = byDate[dateStr];
+                const leaveOnly = leaveOnlyMap[dateStr];
+                const isAnomaly = anomalySet.has(dateStr);
+                const isWeekend = weekday === 0 || weekday === 6;
 
                 const cell = document.createElement('div');
                 cell.className = 'calendar-day';
-                if (weekday === 0 || weekday === 6) cell.classList.add('weekend');
+                if (isWeekend) cell.classList.add('weekend');
                 if (dateStr === todayStr) cell.classList.add('is-today');
 
                 if (rec) {
                     cell.classList.add('has-record');
-                    const warn = isWarnStatus(rec.status);
-                    const miniLabel = rec.workMinutes > 0
-                        ? `${(rec.workMinutes / 60).toFixed(1)}h`
-                        : (formatHM(rec.checkIn) || '');
+                    const warn = isWarnStatus(rec);
+                    const dotClass = rec.hasLeave ? 'leave' : (warn ? 'warn' : 'ok');
+                    const miniLabel = rec.hasLeave
+                        ? rec.leaveLabel
+                        : (rec.workMinutes > 0 ? `${(rec.workMinutes / 60).toFixed(1)}h` : (formatHM(rec.checkIn) || ''));
                     cell.innerHTML = `
-                        <span class="date-num">${day}</span>
-                        <span class="status-dot ${warn ? 'warn' : 'ok'}"></span>
-                        <span class="mini-time">${miniLabel}</span>
-                    `;
-                    cell.addEventListener('click', () => showDayDetail(dateStr, rec, cell));
+                <span class="date-num">${day}</span>
+                <span class="status-dot ${dotClass}"></span>
+                <span class="mini-time">${miniLabel}</span>
+            `;
+                    cell.addEventListener('click', () => showDayDetail(dateStr, rec, cell, false, false, null));
+                } else if (leaveOnly) {
+                    cell.classList.add('leave-only');
+                    cell.innerHTML = `
+                <span class="date-num">${day}</span>
+                <span class="status-dot leave"></span>
+                <span class="mini-time">${leaveOnly.label}</span>
+            `;
+                    cell.addEventListener('click', () => showDayDetail(dateStr, null, cell, isWeekend, isAnomaly, leaveOnly));
                 } else {
                     cell.classList.add('no-record');
+                    if (isAnomaly) cell.classList.add('anomaly');
                     cell.innerHTML = `<span class="date-num">${day}</span>`;
+                    cell.addEventListener('click', () => showDayDetail(dateStr, null, cell, isWeekend, isAnomaly, null));
                 }
 
                 calendarGrid.appendChild(cell);
@@ -304,7 +377,7 @@
                         </div>
                     `;
                 }
-                renderCalendar(data.days);
+                renderCalendar(data.days, data.leaveOnlyDays, data.anomalyDates);
             }
         }
 
