@@ -399,6 +399,7 @@
         <div class="ys-stat-row"><span>出勤天數</span><span class="v">${attendanceDays} 天</span></div>
         <div class="ys-stat-row"><span>遲到 / 早退</span><span class="v warn">${lateDays} / ${earlyDays}</span></div>
         <div class="ys-stat-row"><span>總工時</span><span class="v teal">${Math.floor(totalWorkMinutes / 60)} 小時 ${totalWorkMinutes % 60} 分</span></div>
+        </div>
       </div>
     </div>
     <div class="ys-calendar-panel">
