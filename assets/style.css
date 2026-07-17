@@ -428,15 +428,14 @@ body {
     letter-spacing: 0.01em;
     max-height: 0;
     overflow: hidden;
-    transition: max-height 0.25s ease, padding 0.25s ease;
+    transition: max-height 0.25s ease, opacity 0.25s ease;
+    opacity: 0;
 }
 
 .attendance-note.visible {
     max-height: 40px;
-    padding: 8px 12px;
-    background: var(--amber-soft);
-    border: 1px solid var(--amber-line);
-    border-radius: 8px;
+    padding: 6px 0 0;
+    opacity: 1;
 }
 
 .today-item {
