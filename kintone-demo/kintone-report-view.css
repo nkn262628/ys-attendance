@@ -22,6 +22,7 @@
     --ys-warn: #CD5526;
     --ys-amber: #F7BC49;
     --ys-amber-soft: #FDF2DE;
+    --ys-amber-deep: #9C6B1F;
 
     --ys-radius-card: 10px;
     --ys-radius-control: 6px;
@@ -577,7 +578,7 @@
 .ys-dd-note-alert {
     margin-top: 10px;
     font-size: 13px;
-    color: var(--ys-amber);
+    color: var(--ys-amber-deep);
 }
 
 .ys-dd-placeholder {
@@ -661,7 +662,7 @@
 
 #ys-report-root[data-mobile="true"] .ys-dd-status-pill.warn {
     background: var(--ys-amber-soft);
-    color: var(--ys-amber);
+    color: var(--ys-amber-deep);
 }
 
 #ys-report-root[data-mobile="true"] .ys-dd-status-pill.none {

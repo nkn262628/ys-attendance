@@ -389,7 +389,7 @@
 
 .day-detail .dd-status-pill.warn {
     background: var(--amber-soft);
-    color: var(--amber);
+    color: var(--amber-deep);
 }
 
 .day-detail .dd-times {
@@ -431,7 +431,7 @@
 }
 
 .day-detail .dd-note-alert {
-    color: var(--amber);
+    color: var(--amber-deep);
 }
 
 .day-detail .dd-note-muted {
