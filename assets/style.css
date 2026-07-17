@@ -7,7 +7,7 @@
 
 :root {
     /* 色彩 token */
-    --paper: #F4F1EC;
+    --paper: #E4E7E5;
     --paper-raised: #FDFBF9;
     --navy-deep: #073040;
     --navy: #0F4C5C;
@@ -15,8 +15,8 @@
     --teal-deep: #237373;
     --teal-soft: #DFF0EE;
     --ink: #073040;
-    --muted: #7C8A90;
-    --line: #E2E6E5;
+    --muted: #56646A;
+    --line: #D5DAD8;
     --warn: #CD5526;
     --amber: #F7BC49;
     --amber-soft: #FDF2DE;
