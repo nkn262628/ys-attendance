@@ -47,18 +47,6 @@
       stdEnd: '標準下班時間',
     },
 
-    // 請假 App，用來比對月報表哪些天已核准請假
-    leaveApp: {
-      appId: 2337,
-      empId: '員工編號',
-      leaveType: '請假假別',
-      startTime: '請假起始時間',
-      endTime: '請假結束時間',
-      totalHours: '請假總時數',
-      status: '狀態',
-      statusApproved: '簽核完成',
-    },
-
     // 出勤狀態的「值」，跟 GAS 後端 VALUES 保持一致
     values: {
       attendanceLate: '遲到',
@@ -69,7 +57,6 @@
     // 本月遲到/早退超過幾次要跳警告
     rules: {
       lateWarningThreshold: 3,
-      workHoursPerDay: 8, // 判斷「整天假」是否涵蓋全天用
     },
   };
 
@@ -138,7 +125,6 @@
   let empStdEnd = null;   // 目前選取員工的標準下班時間 "HH:mm"
   let masterList = [];
   let isMobileMode = false;
-  let leaveByDateMap = {};
 
   async function initReport(isMobile) {
     isMobileMode = isMobile;
@@ -187,90 +173,24 @@
   }
 
   // ------------------------------------------------
-  // 查詢這個員工、這個月範圍內、已核准的請假紀錄
-  // ------------------------------------------------
-  function fetchApprovedLeaves(empId, startDate, endDate) {
-    const L = CONFIG.leaveApp;
-    const query = `${L.empId} = "${empId}" and ${L.status} in ("${L.statusApproved}") and ${L.startTime} <= "${endDate}T23:59:59Z" and ${L.endTime} >= "${startDate}T00:00:00Z"`;
-
-    return kintone.api(kintone.api.url('/k/v1/records', true), 'GET', {
-      app: L.appId,
-      query: query,
-      fields: [L.empId, L.leaveType, L.startTime, L.endTime, L.totalHours, L.status],
-    }).then(res => res.records.map(r => ({
-      leaveType: r[L.leaveType].value,
-      start: new Date(r[L.startTime].value),
-      end: new Date(r[L.endTime].value),
-      totalHours: Number(r[L.totalHours].value) || 0,
-    })));
-  }
-
-  // ------------------------------------------------
-  // 把假單清單，攤開成「每一天請了多少小時、哪個假別」的對照表
-  // ------------------------------------------------
-  function buildLeaveByDateMap(leaves) {
-    const map = {};
-    const pad = n => String(n).padStart(2, '0');
-    const dateKey = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-
-    function addToMap(key, leaveType, hours, interval) {
-      if (!map[key]) map[key] = { hours: 0, types: [], intervals: [] };
-      map[key].hours += hours;
-      if (!map[key].types.includes(leaveType)) map[key].types.push(leaveType);
-      if (interval) map[key].intervals.push(interval); // 只有同日假單才有精確起訖，供缺口比對用
-    }
-
-    leaves.forEach(lv => {
-      const startKey = dateKey(lv.start);
-      const endKey = dateKey(lv.end);
-
-      if (startKey === endKey) {
-        // 單日假單(含半天)：時數就是totalHours，並保留起訖時間供精確比對缺口
-        addToMap(startKey, lv.leaveType, lv.totalHours, { start: lv.start, end: lv.end });
-        return;
-      }
-
-      // 跨日假單：簡化假設每天都是整天8小時(見上方已跟你確認過的簡化假設)
-      let cursor = new Date(lv.start.getFullYear(), lv.start.getMonth(), lv.start.getDate());
-      const endDateOnly = new Date(lv.end.getFullYear(), lv.end.getMonth(), lv.end.getDate());
-      while (cursor <= endDateOnly) {
-        addToMap(dateKey(cursor), lv.leaveType, CONFIG.rules.workHoursPerDay);
-        cursor.setDate(cursor.getDate() + 1);
-      }
-    });
-
-    return map;
-  }
-
-  // ------------------------------------------------
   // 統一判斷：這一天最終應該顯示什麼狀態
   // ------------------------------------------------
   function resolveDisplayStatus(dateStr, rec) {
-    const leaveInfo = leaveByDateMap[dateStr];
     const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
     const isPastDay = dateStr < todayStr;
 
     if (!rec) {
-      if (leaveInfo && leaveInfo.hours >= CONFIG.rules.workHoursPerDay) {
-        return { hasLeave: true, label: leaveInfo.types.join('/'), warn: false, partial: false, lateIsProblem: false, earlyIsProblem: false, earlyIsMissingCheckout: false };
-      }
-      return { hasLeave: false, label: null, warn: false, partial: false, lateIsProblem: false, earlyIsProblem: false, earlyIsMissingCheckout: false };
+      return { label: null, warn: false, lateIsProblem: false, earlyIsProblem: false, earlyIsMissingCheckout: false };
     }
 
     if (!isWarn(rec, isPastDay)) {
-      return { hasLeave: false, label: rec.status || '正常', warn: false, partial: false, lateIsProblem: false, earlyIsProblem: false, earlyIsMissingCheckout: false };
+      return { label: rec.status || '正常', warn: false, lateIsProblem: false, earlyIsProblem: false, earlyIsMissingCheckout: false };
     }
 
-    // 沒有標準上下班時間可比對時，退回舊版寬鬆規則
     if (!empStdStart || !empStdEnd) {
-      if (leaveInfo) {
-        return { hasLeave: true, label: leaveInfo.types.join('/'), warn: false, partial: false, lateIsProblem: false, earlyIsProblem: false, earlyIsMissingCheckout: false };
-      }
       return {
-        hasLeave: false,
         label: rec.status,
         warn: true,
-        partial: false,
         lateIsProblem: (rec.status === CONFIG.values.attendanceLate || rec.status === CONFIG.values.attendanceBoth),
         earlyIsProblem: (rec.status === CONFIG.values.attendanceEarly || rec.status === CONFIG.values.attendanceBoth || !rec.checkOut),
         earlyIsMissingCheckout: !rec.checkOut,
@@ -278,26 +198,11 @@
     }
 
     const gaps = computeAnomalyGaps(dateStr, rec, empStdStart, empStdEnd, isPastDay);
-    const intervals = (leaveInfo && leaveInfo.intervals) || [];
-    const lateCovered = intervalCoversGap(intervals, gaps.late);
-    const earlyCovered = intervalCoversGap(intervals, gaps.early);
-
-    if (lateCovered && earlyCovered) {
-      return { hasLeave: true, label: leaveInfo ? leaveInfo.types.join('/') : rec.status, warn: false, partial: false, lateIsProblem: false, earlyIsProblem: false, earlyIsMissingCheckout: false };
-    }
-
-    const lateIsProblem = !!(gaps.late && !lateCovered);
-    const earlyIsProblem = !!(gaps.early && !earlyCovered);
-
     return {
-      hasLeave: !!leaveInfo,
-      // 有假單就顯示假別本身（例如「事假」），不把還沒被蓋掉的異常塞進同一個字串，
-      // 那些異常改到 showDayDetail 的 notes 裡單獨列出
-      label: leaveInfo ? leaveInfo.types.join('/') : rec.status,
+      label: rec.status,
       warn: true,
-      partial: !!leaveInfo,
-      lateIsProblem,
-      earlyIsProblem,
+      lateIsProblem: !!gaps.late,
+      earlyIsProblem: !!gaps.early,
       earlyIsMissingCheckout: !!gaps.earlyIsMissingCheckout,
     };
   }
@@ -327,16 +232,12 @@
     const byDate = {};
     days.forEach(d => { byDate[d.date] = d; });
 
-    const leaves = await fetchApprovedLeaves(empId, startDate, endDate);
-    leaveByDateMap = buildLeaveByDateMap(leaves); // 模組層級變數，下方要新增宣告
-
     const body = document.getElementById('ysReportBody');
     const isCurrentMonth = (viewYear === today.getFullYear() && viewMonth === today.getMonth() + 1);
     const attendanceDays = days.length;
     const dayDisplays = days.map(d => ({ day: d, display: resolveDisplayStatus(d.date, d) }));
     const lateDays = dayDisplays.filter(x => x.display.lateIsProblem).length;
     const earlyDays = dayDisplays.filter(x => x.display.earlyIsProblem).length;
-    const partialDays = dayDisplays.filter(x => x.display.partial).length;
     const combinedWarnDays = dayDisplays.filter(x => x.display.lateIsProblem || x.display.earlyIsProblem).length;
     const totalWorkMinutes = days.reduce((s, d) => s + d.workMinutes, 0);
     const lastConsideredDay = isCurrentMonth ? today.getDate() : lastDay;
@@ -352,8 +253,6 @@
       if (wd === 0 || wd === 6) continue;
       const dateStr = `${viewYear}-${mm}-${String(d).padStart(2, '0')}`;
       if (byDate[dateStr]) continue;
-      const leaveInfo = leaveByDateMap[dateStr];
-      if (leaveInfo && leaveInfo.hours >= CONFIG.rules.workHoursPerDay) continue; // 整天已核准請假，不算異常
       anomalyDates.push(dateStr);
     }
 
@@ -366,12 +265,7 @@
     // warning跟partial合併成一則，主句講次數，partial>0時加一句附註說明子集關係
     let warningHtml = '';
     if (combinedWarnDays >= CONFIG.rules.lateWarningThreshold) {
-      const partialLine = partialDays > 0
-        ? `<div class="ys-warning-sub">其中 ${partialDays} 天已有假單，但未完全涵蓋，請確認是否需要調整假單或補登打卡</div>`
-        : '';
-      warningHtml = `<div class="ys-warning-banner">本月出勤異常（遲到/早退/下班未打卡）已達 ${combinedWarnDays} 次，超過警戒值 ${CONFIG.rules.lateWarningThreshold} 次${partialLine}</div>`;
-    } else if (partialDays > 0) {
-      warningHtml = `<div class="ys-warning-banner ys-warning-partial">有 ${partialDays} 天已核准假單但未完全涵蓋當日出勤異常，請確認是否需要調整假單或補登打卡</div>`;
+      warningHtml = `<div class="ys-warning-banner">本月出勤異常（遲到/早退/下班未打卡）已達 ${combinedWarnDays} 次，超過警戒值 ${CONFIG.rules.lateWarningThreshold} 次</div>`;
     }
 
     const anomalyHtml = anomalyDates.length > 0
@@ -501,18 +395,17 @@
       cell.className = 'ys-day clickable';
       if (weekday === 0 || weekday === 6) cell.classList.add('weekend');
       if (dateStr === todayStr) cell.classList.add('is-today');
-      if (!rec && !display.hasLeave) cell.classList.add('empty');
-      if (display.hasLeave) cell.classList.add('leave');
-      if (!rec && !display.hasLeave && anomalySet.has(dateStr)) cell.classList.add('anomaly');
+      if (!rec) cell.classList.add('empty');
+      if (!rec && anomalySet.has(dateStr)) cell.classList.add('anomaly');
 
       const inTime = rec && rec.checkIn ? new Date(rec.checkIn).toLocaleTimeString('zh-TW', { hour12: false, hour: '2-digit', minute: '2-digit' }) : '';
-      const miniLabel = rec ? (display.hasLeave ? display.label : inTime) : (display.hasLeave ? display.label : '');
+      const miniLabel = rec ? inTime : '';
 
       cell.innerHTML = `
         <span>${day}</span>
-        ${rec ? `<span class="status-dot ${display.warn ? 'warn' : ''} ${display.hasLeave ? 'leave' : ''}"></span>` : (display.hasLeave ? `<span class="status-dot leave"></span>` : '')}
+        ${rec ? `<span class="status-dot ${display.warn ? 'warn' : ''}"></span>` : ''}
         <span class="mini-time">${miniLabel}</span>
-      `; 
+      `;
       cell.addEventListener('click', () => showDayDetail(dateStr, rec, weekday === 0 || weekday === 6, anomalySet.has(dateStr)));
       grid.appendChild(cell);
     }
@@ -522,47 +415,25 @@
     const panel = document.getElementById('ysDayDetail');
     if (!panel) return;
 
-    panel.classList.remove('accent-ok', 'accent-warn', 'accent-none', 'accent-leave');
+    panel.classList.remove('accent-ok', 'accent-warn', 'accent-none');
     const display = resolveDisplayStatus(dateStr, rec);
 
     if (!rec) {
-      if (display.hasLeave) {
-        panel.classList.add('accent-leave');
-        panel.innerHTML = `
-        <div class="ys-dd-header">
-          <span class="ys-dd-date">${dateStr}</span>
-          <span class="ys-dd-status"><span class="dot leave"></span>${display.label}</span>
-        </div>
-        <div class="ys-dd-note">這天已核准「${display.label}」，不列入出勤異常。</div>
-      `;
-        panel.classList.add('visible');
-        return;
-      }
       const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
       const isFuture = dateStr > todayStr;
       const isToday = dateStr === todayStr;
 
       let statusKey, statusLabel, noteText;
       if (isWeekend) {
-        statusKey = 'none';
-        statusLabel = '例假日';
-        noteText = '非工作日，不列入出勤統計。';
+        statusKey = 'none'; statusLabel = '例假日'; noteText = '非工作日，不列入出勤統計。';
       } else if (isFuture) {
-        statusKey = 'none';
-        statusLabel = '尚未發生';
-        noteText = '這天還沒到，尚無出勤資料。';
+        statusKey = 'none'; statusLabel = '尚未發生'; noteText = '這天還沒到，尚無出勤資料。';
       } else if (isToday) {
-        statusKey = 'none';
-        statusLabel = '尚未打卡';
-        noteText = '今天目前還沒有打卡紀錄。';
+        statusKey = 'none'; statusLabel = '尚未打卡'; noteText = '今天目前還沒有打卡紀錄。';
       } else if (isAnomaly) {
-        statusKey = 'warn';
-        statusLabel = '未打卡異常';
-        noteText = '這天沒有任何打卡紀錄，請確認是否為漏打卡，必要時補登或申請假單。';
+        statusKey = 'warn'; statusLabel = '未打卡異常'; noteText = '這天沒有任何打卡紀錄，請確認是否為漏打卡，必要時補登。';
       } else {
-        statusKey = 'none';
-        statusLabel = '未打卡';
-        noteText = '這天沒有打卡紀錄。';
+        statusKey = 'none'; statusLabel = '未打卡'; noteText = '這天沒有打卡紀錄。';
       }
 
       panel.classList.add(statusKey === 'warn' ? 'accent-warn' : 'accent-none');
@@ -585,89 +456,45 @@
       return;
     }
 
-    // 改成
     const fmt = (iso) => iso ? new Date(iso).toLocaleTimeString('zh-TW', { hour12: false, hour: '2-digit', minute: '2-digit' }) : '--:--';
     const warn = display.warn;
-    // accent色改成warn優先：只要還算異常就用amber邊條，即使有假單也一樣（因為partial仍是異常）
-    panel.classList.add(warn ? 'accent-warn' : (display.hasLeave ? 'accent-leave' : 'accent-ok'));
+    panel.classList.add(warn ? 'accent-warn' : 'accent-ok');
 
     const hasProblem = display.lateIsProblem || display.earlyIsProblem;
-    const problemLabel = buildProblemLabel(display, rec);
-    // 只有「有假單 + 下班未打卡」這個組合才拆成兩個狀態，其他情況維持單一狀態
-    const showDualBadge = display.hasLeave && display.earlyIsMissingCheckout;
-
-    // 單一狀態時的文字/樣式：warn優先顯示問題文字，不然才顯示假別，都沒有就顯示原始出勤狀態
-    const singleLabel = hasProblem ? problemLabel : (display.hasLeave ? display.label : (rec.status || '正常'));
-    const singleClass = warn ? 'warn' : (display.hasLeave ? 'leave' : '');
-
-    // 下方細節備註：只在「有假單」時才需要額外說明，其餘情況上方狀態已經講清楚，不重複
-    let noteText = '';
-    let noteIsLeaveStyle = false;
-    if (display.hasLeave && !warn) {
-      noteText = `已核准「${display.label}」，不列入異常`;
-      noteIsLeaveStyle = true;
-    } else if (display.hasLeave && warn) {
-      noteText = `已核准「${display.label}」，但當天仍有 ${problemLabel}，請確認是否需要調整`;
-    }
+    const singleLabel = hasProblem ? buildProblemLabel(display, rec) : (rec.status || '正常');
+    const singleClass = warn ? 'warn' : '';
 
     if (isMobileMode) {
       panel.innerHTML = `
     <div class="ys-dd-header">
       <span class="ys-dd-date">${dateStr}</span>
-      ${showDualBadge ? `
-        <span class="ys-dd-status-pill-group">
-          <span class="ys-dd-status-pill leave">${display.label}</span>
-          <span class="ys-dd-status-pill warn">下班未打卡</span>
-        </span>
-      ` : `<span class="ys-dd-status-pill ${singleClass}">${singleLabel}</span>`}
+      <span class="ys-dd-status-pill ${singleClass}">${singleLabel}</span>
     </div>
     <div class="ys-dd-times">
-      <div class="ys-dd-item">
-        <div class="ys-dd-label">上班</div>
-        <div class="ys-dd-value">${fmt(rec.checkIn)}</div>
-      </div>
-      <div class="ys-dd-item">
-        <div class="ys-dd-label">下班</div>
-        <div class="ys-dd-value">${fmt(rec.checkOut)}</div>
-      </div>
-      <div class="ys-dd-item">
-        <div class="ys-dd-label">工作時數</div>
-        <div class="ys-dd-value">${Math.floor(rec.workMinutes / 60)}h${rec.workMinutes % 60}m</div>
-      </div>
+      <div class="ys-dd-item"><div class="ys-dd-label">上班</div><div class="ys-dd-value">${fmt(rec.checkIn)}</div></div>
+      <div class="ys-dd-item"><div class="ys-dd-label">下班</div><div class="ys-dd-value">${fmt(rec.checkOut)}</div></div>
+      <div class="ys-dd-item"><div class="ys-dd-label">工作時數</div><div class="ys-dd-value">${Math.floor(rec.workMinutes / 60)}h${rec.workMinutes % 60}m</div></div>
     </div>
-    ${noteText ? `<div class="${noteIsLeaveStyle ? 'ys-dd-note-leave' : 'ys-dd-note-warn'}">${noteText}</div>` : ''}
   `;
     } else {
       panel.innerHTML = `
     <div class="ys-dd-header">
       <span class="ys-dd-date">${dateStr}</span>
-      ${showDualBadge ? `
-        <span class="ys-dd-status-group">
-          <span class="ys-dd-status leave"><span class="dot leave"></span>${display.label}</span>
-          <span class="ys-dd-status warn"><span class="dot warn"></span>下班未打卡</span>
-        </span>
-      ` : `<span class="ys-dd-status"><span class="dot ${singleClass}"></span>${singleLabel}</span>`}
+      <span class="ys-dd-status"><span class="dot ${singleClass}"></span>${singleLabel}</span>
     </div>
     <div class="ys-timeline">
       <div class="ys-timeline-node">
         <span class="ys-timeline-dot ${rec.checkIn ? 'filled' : ''}"></span>
-        <div class="ys-timeline-content">
-          <span class="l">上班</span>
-          <span class="v">${fmt(rec.checkIn)}</span>
-        </div>
+        <div class="ys-timeline-content"><span class="l">上班</span><span class="v">${fmt(rec.checkIn)}</span></div>
       </div>
       <div class="ys-timeline-line"></div>
       <div class="ys-timeline-node">
         <span class="ys-timeline-dot ${rec.checkOut ? 'filled' : ''}"></span>
-        <div class="ys-timeline-content">
-          <span class="l">下班</span>
-          <span class="v">${fmt(rec.checkOut)}</span>
-        </div>
+        <div class="ys-timeline-content"><span class="l">下班</span><span class="v">${fmt(rec.checkOut)}</span></div>
       </div>
     </div>
     <div class="ys-dd-summary">
       <span>工時 <b>${Math.floor(rec.workMinutes / 60)}</b>時<b>${rec.workMinutes % 60}</b>分</span>
-      ${noteText ? `<span class="${noteIsLeaveStyle ? 'leave-text' : 'warn-text'}">${noteText}</span>` : ''}
     </div>
   `;
     }
@@ -702,13 +529,6 @@
       if (actualOut < stdEnd) gaps.early = { start: actualOut, end: stdEnd };
     }
     return gaps;
-  }
-
-  // 假單區間是否「完整涵蓋」缺口(不只是重疊)
-  function intervalCoversGap(intervals, gap) {
-    if (!gap) return true; // 這天根本沒有這段缺口，視為不需要涵蓋
-    if (!intervals || intervals.length === 0) return false;
-    return intervals.some(iv => iv.start <= gap.start && iv.end >= gap.end);
   }
 
   function isWarn(rec, isPastDay) {

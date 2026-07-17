@@ -232,18 +232,6 @@
     color: var(--ys-muted);
 }
 
-.ys-warning-partial {
-    border-left-color: var(--ys-amber);
-    color: var(--ys-amber);
-}
-
-.ys-warning-sub {
-    margin-top: 4px;
-    font-size: 12px;
-    color: var(--ys-muted);
-    font-weight: 400;
-}
-
 /* ---- 總覽卡片 ---- */
 .ys-overview {
     display: flex;
@@ -499,18 +487,6 @@
     background: var(--ys-muted);
 }
 
-.ys-dd-status-group {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.ys-dd-status-pill-group {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
 .ys-timeline {
     display: flex;
     align-items: center;
@@ -584,10 +560,6 @@
 
 .ys-dd-summary .warn-text {
     color: var(--ys-amber);
-}
-
-.ys-dd-summary .leave-text {
-    color: var(--ys-teal-deep);
 }
 
 .ys-dd-note {
@@ -731,15 +703,6 @@
     letter-spacing: 0.01em;
 }
 
-#ys-report-root[data-mobile="true"] .ys-dd-note-leave {
-    margin-top: 10px;
-    padding-top: 10px;
-    border-top: 1px dashed var(--ys-line);
-    font-size: 11.5px;
-    color: var(--ys-teal-deep);
-    letter-spacing: 0.01em;
-}
-
 /* ---- 日曆圖例 ---- */
 .ys-calendar-legend {
     display: flex;
@@ -773,23 +736,4 @@
 
 .ys-calendar-legend .dot.none {
     background: var(--ys-line);
-}
-
-/* ---- 請假覆蓋樣式：跟 warn(amber) 區隔，用 teal 表示「已核准、非異常」---- */
-.ys-day.leave {
-    border-style: dotted;
-    border-color: var(--ys-teal);
-}
-
-.status-dot.leave {
-    background: var(--ys-teal);
-}
-
-.ys-day-detail.accent-leave {
-    border-left-color: var(--ys-teal);
-}
-
-.ys-dd-status-pill.leave {
-    background: var(--ys-teal-soft);
-    color: var(--ys-teal-deep);
 }
