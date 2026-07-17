@@ -279,7 +279,7 @@
                         alert('定位失敗，代碼：' + err.code + '，訊息：' + err.message);
                         resolve(null);
                     },
-                    { timeout: 8000 }
+                    { timeout: 15000, enableHighAccuracy: true, maximumAge: 0 }
                 );
             });
         }
