@@ -7,19 +7,20 @@
 
 :root {
     /* 色彩 token */
-    --paper: #EEF2F1;
-    --paper-raised: #FFFFFF;
-    --navy-deep: #0D1B26;
-    --navy: #14293D;
-    --teal: #1F8F86;
-    --teal-deep: #146058;
-    --teal-soft: #DCEEEC;
-    --ink: #16242E;
-    --muted: #6E7C86;
-    --line: #D8DFDD;
-    --amber: #A6752E;
-    --amber-soft: #FBF2E3;
-    --amber-line: #E4C99A;
+    --paper: #F4F1EC;
+    --paper-raised: #FDFBF9;
+    --navy-deep: #073040;
+    --navy: #0F4C5C;
+    --teal: #2F9696;
+    --teal-deep: #237373;
+    --teal-soft: #DFF0EE;
+    --ink: #073040;
+    --muted: #7C8A90;
+    --line: #E2E6E5;
+    --warn: #CD5526;
+    --amber: #F7BC49;
+    --amber-soft: #FDF2DE;
+    --amber-line: #EAD9AE;
 
     /* 字體 */
     --font-display: 'Space Grotesk', 'IBM Plex Sans', sans-serif;
@@ -327,9 +328,9 @@ body {
 }
 
 .status.error {
-    color: #A23B3B;
-    background: #FBEEEE;
-    border: 1px solid #E3B3B3;
+    color: var(--warn);
+    background: #FBEDE7;
+    border: 1px solid #E8BBA5;
     border-radius: 8px;
     padding: 10px 14px;
 }

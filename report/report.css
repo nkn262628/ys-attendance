@@ -155,7 +155,7 @@
 }
 
 .stat-row .stat-value.warn {
-    color: #A23B3B;
+    color: var(--warn);
 }
 
 .stat-row .stat-value.teal {
@@ -277,7 +277,7 @@
 
 .calendar-day.no-record.anomaly {
     border-style: dashed;
-    border-color: var(--amber);
+    border-color: var(--warn);
     opacity: 0.75;
 }
 

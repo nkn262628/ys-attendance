@@ -9,26 +9,26 @@
 
 /* ---- 主題 A：低調精品感（目前使用中）---- */
 #ys-report-root[data-theme="A"] {
-    --ys-navy: #14293D;
-    --ys-navy-deep: #0D1B26;
-    --ys-teal: #1F8F86;
-    --ys-teal-deep: #146058;
-    --ys-teal-soft: #DCEEEC;
-    --ys-ink: #16242E;
-    --ys-muted: #6E7C86;
-    --ys-line: #D8DFDD;
-    --ys-paper: #EEF2F1;
-    --ys-paper-raised: #FFFFFF;
-    --ys-warn: #A23B3B;
-    --ys-amber: #A6752E;
-    --ys-amber-soft: #FBF2E3;
+    --ys-navy: #0F4C5C;
+    --ys-navy-deep: #073040;
+    --ys-teal: #2F9696;
+    --ys-teal-deep: #237373;
+    --ys-teal-soft: #DFF0EE;
+    --ys-ink: #073040;
+    --ys-muted: #7C8A90;
+    --ys-line: #E2E6E5;
+    --ys-paper: #F4F1EC;
+    --ys-paper-raised: #FDFBF9;
+    --ys-warn: #CD5526;
+    --ys-amber: #F7BC49;
+    --ys-amber-soft: #FDF2DE;
 
     --ys-radius-card: 10px;
     --ys-radius-control: 6px;
     --ys-radius-day: 6px;
     --ys-radius-pill: 20px;
 
-    --ys-shadow-card: 0 1px 2px rgba(20, 41, 61, 0.04);
+    --ys-shadow-card: 0 1px 2px rgba(7, 48, 64, 0.05);
 
     --ys-font-display: 'Space Grotesk', 'IBM Plex Sans', -apple-system, sans-serif;
     --ys-font-mono: 'Space Grotesk', 'IBM Plex Mono', 'SF Mono', monospace;
