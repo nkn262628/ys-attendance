@@ -196,7 +196,7 @@
 .calendar-day {
     position: relative;
     aspect-ratio: 1 / 1;
-    border-radius: 5ch;
+    border-radius: 5px;
     background: var(--paper-raised);
     border: 0.5px solid var(--line);
     padding: 6px 3px 5px;
