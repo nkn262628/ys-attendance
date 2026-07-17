@@ -442,7 +442,7 @@ body {
 .today-item {
     flex: 1;
     background: var(--paper);
-    border: 2px dashed #C7CDC9;
+    border: 1px dashed #C7CDC9;
     border-radius: 10px;
     padding: 10px 0;
     text-align: center;
@@ -451,7 +451,7 @@ body {
 
 .today-item.filled {
     background: var(--teal-soft);
-    border: 2px solid var(--teal);
+    border: 1px solid var(--teal);
     animation: item-pop 0.35s ease;
 }
 
