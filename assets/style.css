@@ -91,22 +91,22 @@ body {
 .topbar-link {
     display: inline-flex;
     align-items: center;
-    margin-left: 2px;
-    color: inherit;
+    margin-left: 4px;
+    color: #C7D2D8;
     text-decoration: none;
-    opacity: 0.7;
     line-height: 0;
-    transition: opacity 0.15s ease;
+    transition: color 0.15s ease;
 }
 
 .topbar-link:hover {
-    opacity: 1;
+    color: #FFFFFF;
 }
 
 .topbar-link svg {
     display: block;
-    width: 14px;
-    height: 14px;
+    width: 16px;
+    height: 16px;
+    stroke-width: 2.2;
 }
 
 /* 主體容器 */
