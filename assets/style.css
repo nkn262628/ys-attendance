@@ -62,6 +62,14 @@ body {
     width: 100%;
     background: var(--navy);
     color: #FFFFFF;
+    display: flex;
+    justify-content: center;
+}
+
+.topbar-bar {
+    position: relative;
+    width: 100%;
+    max-width: 400px;
     padding: 14px 20px;
     display: flex;
     align-items: center;
@@ -89,10 +97,13 @@ body {
 /* 導覽小圖示：緊跟在子標題後面，跟文字同一列一起置中，
    line-height:0 + 14px 尺寸確保不會撐高整條 topbar */
 .topbar-link {
+    position: absolute;
+    right: 20px;
+    top: 50%;
+    transform: translateY(-50%);
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    margin-left: 6px;
     width: 24px;
     height: 24px;
     border-radius: 50%;
