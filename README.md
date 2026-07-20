@@ -28,7 +28,7 @@ LINE LIFF + LINE Bot 員工出勤打卡系統，整合 Kintone、Google Apps Scr
 
 | 路徑 | 用途 |
 |---|---|
-| `index.html` | 進站頁面（⚠️ 待確認：目前實際作用是導向哪個頁面，還是單純測試用入口，請補充） |
+| `index.html` | 進站轉址頁 — 純 JS `window.location.href` 導向 `checkin/index.html`，並保留原本網址的 query string 與 hash（沒有其他內容） |
 | `assets/favicon.png` | 網站圖示 |
 | `assets/style.css` | **共用樣式**，三個 LIFF 頁面都引用這支，`.topbar` / `.card` / 按鈕 / 狀態列等基礎樣式都在這裡 |
 | `bind/index.html` | 員工綁定頁 — 使用者第一次使用時，將 LINE 帳號與 Kintone 員工主檔綁定 |
@@ -38,14 +38,14 @@ LINE LIFF + LINE Bot 員工出勤打卡系統，整合 Kintone、Google Apps Scr
 | `shared/kintone-api.js` | 前端對 Kintone 相關的輔助呼叫 |
 | `shared/liff-utils.js` | `LiffUtils` 共用模組：`init()` / `checkBinding()` / `punch()` / `getStatus()` / `getMonthlyReport()` 等，三個頁面共用同一份 |
 | `kintone-demo/kintone-report-view.js`、`.css` | **注意：這是 Kintone 打卡紀錄 App 內建的自訂 JS/CSS**（後台桌面版月報表檢視），跟 LIFF 版 `report/index.html` 是兩套獨立實作、邏輯需要手動保持同步，不是同一支程式碼共用 |
-| `ngrok.exe` | 開發階段暫時對外測試用的工具（⚠️ 待確認：目前正式環境的靜態頁走 GitHub Pages、GAS 走 Web App 部署，兩者都已有 HTTPS，這支應該已經用不到，如果還有用途請補充說明） |
+| ~~`ngrok.exe`~~ | 開發階段暫時對外測試用的工具，正式環境已改用 GitHub Pages + GAS Web App（皆自帶 HTTPS），確認不再需要，已刪除 |
 
 ## 部署流程
 
 ### 前端（LIFF 靜態頁）
 1. 修改對應資料夾內的 `.html` / `.css` / `.js`
 2. Commit + push 到 GitHub
-3. GitHub Pages 會自動重新發布（⚠️ 待確認：目前是 push 到哪個分支自動觸發，還是需要手動觸發 build）
+3. GitHub Pages 會在 push 後自動重新發布，不用手動 build 或觸發部署
 4. 記得同步更新 HTML 內 `<link>` / `<script>` 的版本查詢字串（例如 `style.css?v=3` 改成 `?v=4`），避免使用者端瀏覽器快取到舊版
 
 ### 後端（GAS）
@@ -58,7 +58,7 @@ LINE LIFF + LINE Bot 員工出勤打卡系統，整合 Kintone、Google Apps Scr
 - Apps Script 編輯器 →「部署」→「管理部署作業」
 - 網址結尾 `/dev` = 測試部署，跑的是編輯器裡「目前最新存檔」的程式碼，改了就立刻影響
 - 網址結尾 `/exec` = 正式部署，綁定固定版本號，改程式碼不會有影響，要手動建立新版本才會更新
-- ⚠️ 待確認：目前 `shared/config.js` 裡設定的後端網址，實際上是哪一種
+- 已確認：`shared/config.js` 裡設定的後端網址是 `/exec` 結尾，目前是正式部署，不是測試模式
 
 ## 常見問題 / 排錯
 
@@ -66,11 +66,3 @@ LINE LIFF + LINE Bot 員工出勤打卡系統，整合 Kintone、Google Apps Scr
 - **月報表頁跟 Kintone 後台顯示邏輯不一致** → `report/index.html`（LIFF 版）跟 `kintone-demo/kintone-report-view.js`（Kintone 後台版）是各自獨立的程式碼，改動異常判斷邏輯時記得兩邊都要改
 - **打卡失敗但沒有明確錯誤訊息** → 先確認 GAS 部署是不是正式版（見上方「確認部署」段落），測試部署常常是問題來源
 - **LIFF 頁面在 LINE 裡打不開 / 空白** → 確認 GitHub Pages 網址是不是有正確設定進 LINE Developers 後台的 LIFF endpoint URL
-
-## 待補充項目
-
-以下幾點目前是我根據對話脈絡推測，麻煩你確認或補充後我再更新：
-- [ ] 根目錄 `index.html` 實際用途
-- [ ] GitHub Pages 觸發部署的分支/流程
-- [ ] `ngrok.exe` 是否還有實際用途
-- [ ] `shared/config.js` 裡後端網址目前是 `/dev` 還是 `/exec`
