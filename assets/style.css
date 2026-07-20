@@ -91,21 +91,26 @@ body {
 .topbar-link {
     display: inline-flex;
     align-items: center;
-    margin-left: 4px;
-    color: #C7D2D8;
+    justify-content: center;
+    margin-left: 6px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.12);
+    color: #E4ECEE;
     text-decoration: none;
-    line-height: 0;
-    transition: color 0.15s ease;
+    transition: background 0.15s ease, color 0.15s ease;
 }
 
 .topbar-link:hover {
+    background: rgba(255, 255, 255, 0.22);
     color: #FFFFFF;
 }
 
 .topbar-link svg {
     display: block;
-    width: 16px;
-    height: 16px;
+    width: 14px;
+    height: 14px;
     stroke-width: 2.2;
 }
 
