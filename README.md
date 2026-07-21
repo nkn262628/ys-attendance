@@ -7,7 +7,7 @@ LINE LIFF + LINE Bot 員工出勤打卡系統，整合 Kintone、Google Apps Scr
 ```
 使用者手機 LINE App
       │
-      ├─ 點擊 Rich Menu（上班／下班／查詢）
+      ├─ 點擊 Rich Menu（上班／下班／月報表）
       │       → 觸發 GAS doPost（LINE Bot webhook）
       │       → GAS 回傳 Flex Message，內含 LIFF 連結
       │
@@ -21,8 +21,8 @@ LINE LIFF + LINE Bot 員工出勤打卡系統，整合 Kintone、Google Apps Scr
 | 內容 | 程式碼版控位置 | 實際執行 / 部署位置 |
 |---|---|---|
 | 靜態 LIFF 頁面（`checkin`／`report`／`bind`） | 本 repo | GitHub Pages（push 即自動發布） |
-| GAS `doPost` 統一入口（`backend/`） | 本 repo `backend/`，透過 `clasp` 同步 | 仍然是 Google Apps Script 執行；clone 進 git 只是有了版本控制跟備份，**不影響也不取代**部署流程，改完 code 還是要照「後端（GAS）」段落手動建立新的部署版本 |
-| Kintone 打卡紀錄 App 的後台自訂 JS/CSS（`kintone-demo/`） | 本 repo `kintone-demo/` | Kintone App 內建的 JS 客製化設定裡（上傳／貼上程式碼進 Kintone 後台） |
+| GAS `doPost` 統一入口（`backend/`） | 本 repo； `backend/`，透過 `clasp` 同步 | 仍然是 Google Apps Script 執行；clone 進 git 只是有了版本控制跟備份，**不影響也不取代**部署流程，改完 code 還是要照「後端（GAS）」段落手動建立新的部署版本 |
+| Kintone 打卡紀錄 App 的後台自訂 JS/CSS（`kintone-demo/`） | 本 repo； `kintone-demo/` | Kintone App 內建的 JS 客製化設定裡（上傳／貼上程式碼進 Kintone 後台） |
 
 資料庫本身（打卡紀錄 App、員工主檔 App 的實際資料）在 Kintone，不屬於上面任何一條程式碼線，純粹是資料儲存的地方。
 
@@ -53,7 +53,7 @@ LINE LIFF + LINE Bot 員工出勤打卡系統，整合 Kintone、Google Apps Scr
 
 ### 後端（GAS）
 1. 在 Apps Script 編輯器修改 `Code.gs`（或其他 `.gs` 檔）
-2. **重點：改完程式碼不會自動生效在正式環境**，除非重新建立部署版本：
+2. **重點：改完程式碼不會自動生效在正式環境**，需要重新建立部署版本：
    右上角「部署」→「管理部署作業」→ 找到正式的 Web app 部署 → 點編輯（鉛筆圖示）→ 版本選「新版本」→ 部署
 3. 部署後網址（`/exec` 結尾）維持不變，不用重新設定 LINE Bot webhook 或 `config.js`
 
@@ -93,15 +93,13 @@ clasp clone <貼上指令碼ID>
 
 ## 多客戶／模組化注意事項
 
-這套系統目前是單一客戶（威志雲端）專用，如果之後要複製給其他客戶用，以下這些地方是目前**寫死、需要抽成設定**的部分，換客戶時只需要動這些，不用動核心邏輯：
+這套系統目前為單一客戶，如果之後要複製給其他客戶用，以下這些地方是目前**寫死、需要抽成設定**的部分，換客戶時只需要動這些，不用動核心邏輯：
 
 - **Kintone App ID**：打卡紀錄 App、員工主檔 App 的 ID，目前分散寫在 GAS 程式碼跟 `kintone-demo/*.js` 裡，換客戶時每個 App ID 都不同
 - **Kintone 欄位代碼**：員工編號、標準上班/下班時間等欄位代碼，不同客戶的 Kintone 環境欄位代碼可能不一樣
 - **LIFF ID / LINE 相關設定**：`shared/config.js` 裡的 LIFF ID、GAS 後端網址，每個客戶都是獨立的 LINE 官方帳號跟 LIFF 應用
 - **Rich Menu 圖片與版面設定**：目前的 2500×843 三欄版型是客製化的，換客戶可能要重新設計
 - **出勤規則參數**：標準上班/下班時間判定、遲到早退警戒門檻（`LATE_WARNING_THRESHOLD` 等）可能因客戶而異
-
-**目前實際狀況（已確認）**：
 - `backend/Config.js` 集中管理欄位名稱（`FIELDS`）、狀態值文字（`VALUES`）、業務規則（`RULES`：員工編號格式、公司座標與打卡範圍、提醒分鐘數、午休扣時、歡迎文案等）——換客戶時這些改這支檔案就好
 - **Kintone App ID、LINE Channel Access Token / Secret 都放在 Script Properties**（Apps Script 後台的「指令碼屬性」），不是寫死在 `.gs` 檔案裡，也因此不會被 `clasp pull` 抓進 git——這是對的做法，敏感值不會意外外洩到版本控制裡
 
