@@ -105,7 +105,7 @@ clasp clone <貼上指令碼ID>
 - `backend/Config.js` 集中管理欄位名稱（`FIELDS`）、狀態值文字（`VALUES`）、業務規則（`RULES`：員工編號格式、公司座標與打卡範圍、提醒分鐘數、午休扣時、歡迎文案等）——換客戶時這些改這支檔案就好
 - **Kintone App ID、LINE Channel Access Token / Secret 都放在 Script Properties**（Apps Script 後台的「指令碼屬性」），不是寫死在 `.gs` 檔案裡，也因此不會被 `clasp pull` 抓進 git——這是對的做法，敏感值不會意外外洩到版本控制裡
 
-換句話說，目前的模組化程度其實已經不錯：**會因客戶而變的東西，分別放在「進 git 的 `Config.js`」跟「不進 git 的 Script Properties」兩處**，核心邏輯（`Punch.js`／`Report.js`／`LineBot.js`／`Router.js`）理論上不用因換客戶而修改。真的要換客戶時，實務上要做的事情是：
+換句話說，目前的模組化程度為：**會因客戶而變的東西，分別放在「進 git 的 `Config.js`」跟「不進 git 的 Script Properties」兩處**，核心邏輯（`Punch.js`／`Report.js`／`LineBot.js`／`Router.js`）理論上不用因換客戶而修改。真的要換客戶時，實務上要做的事情是：
 1. 建立新的 Kintone App，把新的 App ID／欄位代碼設進新專案的 Script Properties 與 `Config.js`
 2. 申請新客戶的 LINE 官方帳號、LIFF，Channel Token/Secret 設進 Script Properties，`shared/config.js` 的 LIFF ID 跟後端網址也要換成新的
 3. 依新客戶需求調整 `Config.js` 裡的 `RULES`（座標、上下班時間規則、歡迎文案等）
